@@ -300,8 +300,8 @@ export default function MethodStory() {
           </div>
           <p>
             RoboMem synthesizes questions with spatial, temporal, and event
-            constraints. Supervised fine-tuning and GSPO train retrieval and
-            reasoning with rewards matched to the answer type.
+            constraints. Retrieval and reasoning are optimized with rewards
+            matched to the answer type.
           </p>
           <small>Figures 2 & 4 · Sections 3–4</small>
         </div>

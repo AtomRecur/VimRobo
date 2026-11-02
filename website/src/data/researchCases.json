@@ -1,7 +1,6 @@
 {
   "schemaVersion": 1,
   "uniqueImageCount": 129,
-  "model": "Qwen/Qwen3.5-9B-SFT",
   "cases": [
     {
       "id": "13",
@@ -674,7 +673,7 @@
         "maxDepth": 4,
         "repeatedQueries": 1
       },
-      "sourceNote": "Recorded Qwen3.5-9B-SFT search graph from the supplied audit. Node summaries and parent IDs are preserved; labels are shortened for display. Gold answer edges represent direct logged citations, not every explored branch.",
+      "sourceNote": "Based on recorded searches and retrieved evidence.",
       "sourceFile": "case_13.json"
     },
     {
@@ -1681,7 +1680,7 @@
         "maxDepth": 3,
         "repeatedQueries": 0
       },
-      "sourceNote": "Recorded Qwen3.5-9B-SFT search graph from the supplied audit. Node summaries and parent IDs are preserved; labels are shortened for display. Gold answer edges represent direct logged citations, not every explored branch.",
+      "sourceNote": "Based on recorded searches and retrieved evidence.",
       "sourceFile": "case_04.json"
     },
     {
@@ -2529,7 +2528,7 @@
         "maxDepth": 3,
         "repeatedQueries": 0
       },
-      "sourceNote": "Recorded Qwen3.5-9B-SFT search graph from the supplied audit. Node summaries and parent IDs are preserved; labels are shortened for display. Gold answer edges represent direct logged citations, not every explored branch.",
+      "sourceNote": "Based on recorded searches and retrieved evidence.",
       "sourceFile": "case_08.json"
     },
     {
@@ -3593,7 +3592,7 @@
         "maxDepth": 5,
         "repeatedQueries": 2
       },
-      "sourceNote": "Recorded Qwen3.5-9B-SFT search graph from the supplied audit. Node summaries and parent IDs are preserved; labels are shortened for display. Gold answer edges represent direct logged citations, not every explored branch.",
+      "sourceNote": "Based on recorded searches and retrieved evidence.",
       "sourceFile": "case_01.json"
     }
   ],

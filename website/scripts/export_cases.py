@@ -154,7 +154,7 @@ for cid in ['13','04','08','01']:
  if cid=='08':quality['note']='The evaluator extracts 09:59:58 from the answer; the annotated time is 10:00:07.'
  if cid=='01':quality['note']='The evaluator extracts 15:36:38 from the answer; the annotated time is 15:36:40.'
  case_ids=unique(case_ids)
- CASES.append({'id':cid,'shape':shape,'title':title,'question':d['graph'][0]['original_query'],'answer':d['prediction'],'description':description,'quality':quality,'seqId':d['seq_id'],'nodes':nodes,'edges':edges,'evidenceIds':case_ids,'evidence':[],'finalCitationIds':d['graph'][-1]['parent_ids'],'stats':{'nodes':len(nodes),'retrievals':len(nodes)-2,'uniqueImages':len(case_ids),'maxDepth':max(depths.values()),'repeatedQueries':sum('repeatedQueryOf' in n for n in nodes)},'sourceNote':'Recorded Qwen3.5-9B-SFT search graph from the supplied audit. Node summaries and parent IDs are preserved; labels are shortened for display. Gold answer edges represent direct logged citations, not every explored branch.','sourceFile':f'case_{cid}.json'})
+ CASES.append({'id':cid,'shape':shape,'title':title,'question':d['graph'][0]['original_query'],'answer':d['prediction'],'description':description,'quality':quality,'seqId':d['seq_id'],'nodes':nodes,'edges':edges,'evidenceIds':case_ids,'evidence':[],'finalCitationIds':d['graph'][-1]['parent_ids'],'stats':{'nodes':len(nodes),'retrievals':len(nodes)-2,'uniqueImages':len(case_ids),'maxDepth':max(depths.values()),'repeatedQueries':sum('repeatedQueryOf' in n for n in nodes)},'sourceNote':'Based on recorded searches and retrieved evidence.','sourceFile':f'case_{cid}.json'})
 
 print('Unique images',len(ALL_IMAGES),flush=True)
 assert len(ALL_IMAGES)==129
@@ -171,7 +171,7 @@ for j,(iid,source_path) in enumerate(ALL_IMAGES.items()):
  all_evidence[iid]={'id':iid,'image':f'cases/{iid}.jpg','timestamp':timestamp,'timestampSeconds':float(d.get('timestamp',Path(source_path).stem)),'sourceFilename':Path(source_path).name,'label':f'Recorded frame · {timestamp}','position':np.asarray(d.get('position',meta.get('position',[]))).round(5).tolist()}
  if j%20==0:print('Exported',j+1,'/',len(ALL_IMAGES),flush=True)
 for c in CASES:c['evidence']=[all_evidence[i] for i in c.pop('evidenceIds')]
-result={'schemaVersion':1,'uniqueImageCount':len(ALL_IMAGES),'model':'Qwen/Qwen3.5-9B-SFT','coordinateNote':'Evidence positions are recorded robot poses, not surveyed object coordinates.','cases':CASES}
+result={'schemaVersion':1,'uniqueImageCount':len(ALL_IMAGES),'coordinateNote':'Evidence positions are recorded robot poses, not surveyed object coordinates.','cases':CASES}
 (OUTPUT/'researchCases.json').write_text(json.dumps(result,indent=2))
 manifest={'sources':[f'case_{c}.json' for c in ['13','04','08','01']],'imageCount':len(ALL_IMAGES),'imageTransforms':'cam0 BGR array -> RGB -> max 480px longest edge -> JPEG quality 78','originalGraphEdges':sum(len(c['edges']) for c in CASES),'exportedImageBytes':sum(p.stat().st_size for p in IMAGES.glob('*.jpg')),'notes':['All image_path references from each original traj were deduplicated by sequence and source filename.','A node evidenceIds list contains images visible in its recorded step; retrievedEvidenceIds contains only images following a search call.','Final citations are the original answer.parent_ids, with no extra inferred merge edges.','Only graph evidence summaries are exported; raw system prompts and private step reasoning remain in the source.']}
 (OUTPUT/'manifest.json').write_text(json.dumps(manifest,indent=2))

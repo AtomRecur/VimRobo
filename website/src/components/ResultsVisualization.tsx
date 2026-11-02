@@ -32,6 +32,7 @@ const metrics: { key: MetricKey; label: string; detail: string }[] = [
 export default function ResultsVisualization() {
   const [model, setModel] = useState<"4B" | "9B">("9B");
   const [metric, setMetric] = useState<MetricKey>("descriptive");
+  const settingLabel = model === "4B" ? "Setting 1" : "Setting 2";
   const rows = benchmarkResults[model];
   const m = metrics.find((m) => m.key === metric)!;
   const best = rows[7][metric]!;
@@ -55,7 +56,7 @@ export default function ResultsVisualization() {
       </div>
       <div className="results-layout reveal">
         <div className="results-highlight">
-          <span className="eyebrow">VIMROBO · QWEN3.5-{model}</span>
+          <span className="eyebrow">VIMROBO · {settingLabel}</span>
           <div className="headline-metric">
             {best.toFixed(1)}
             <span>%</span>
@@ -67,10 +68,10 @@ export default function ResultsVisualization() {
             <span>
               over the strongest baseline
               <br />
-              for this metric and model scale
+              for this metric and evaluation setting
             </span>
           </div>
-          <div className="model-toggle" aria-label="Model size">
+          <div className="model-toggle" aria-label="Evaluation setting">
             {(["4B", "9B"] as const).map((v) => (
               <button
                 key={v}
@@ -78,7 +79,7 @@ export default function ResultsVisualization() {
                 className={model === v ? "selected" : ""}
                 aria-pressed={model === v}
               >
-                Qwen3.5-{v}
+                {v === "4B" ? "Setting 1" : "Setting 2"}
               </button>
             ))}
           </div>
@@ -103,7 +104,7 @@ export default function ResultsVisualization() {
           <div
             className="bar-chart"
             role="img"
-            aria-label={`NaVQA ${m.detail}, Qwen3.5-${model}. ${rows.map((r) => `${r.name}: ${r[metric] ?? "not reported"}${r[metric] !== null ? " percent" : ""}`).join("; ")}`}
+            aria-label={`NaVQA ${m.detail}, ${settingLabel}. ${rows.map((r) => `${r.name}: ${r[metric] ?? "not reported"}${r[metric] !== null ? " percent" : ""}`).join("; ")}`}
           >
             {rows.map((r) => (
               <div
@@ -136,11 +137,10 @@ export default function ResultsVisualization() {
         <p>
           Source: supplied confidential manuscript, Table 2, page 6. Overall
           scores across short, medium, and long NaVQA sequences. Descriptive
-          answers use a binary GPT-6 judge; spatial thresholds are 1 m / 5 m,
+          answers use binary scoring; spatial thresholds are 1 m / 5 m,
           and temporal thresholds are 5 s / 20 s. All comparisons use the
-          selected Qwen3.5 model scale. ConceptGraphs temporal results are
-          unreported, not zero. VimRobo uses LoRA SFT followed by GSPO;
-          inference uses 3-second clips sampled at 2 fps. Percentage-point gains
+          selected evaluation setting. ConceptGraphs temporal results are
+          unreported, not zero. Retrieval uses 3-second clips sampled at 2 fps. Percentage-point gains
           are calculated against the best reported baseline for the selected
           metric.
         </p>
