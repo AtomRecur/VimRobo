@@ -1,5 +1,4 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
 import selections from "../data/evidenceFilmstrip.json";
 import type { ResearchCase } from "../data/caseTypes";
 import { useReducedMotion, useVisibility } from "../hooks";
@@ -19,14 +18,35 @@ function EvidenceFilmstrip({ record }: { record: ResearchCase }) {
   const groupWidth = useRef(0);
   const scrollOffset = useRef(0);
   const drag = useRef<{ id: number; x: number; offset: number } | null>(null);
+  const resumeTimer = useRef<number | null>(null);
   const [loaded, setLoaded] = useState<Set<string>>(() => new Set());
-  const [paused, setPaused] = useState(false);
+  const [interacting, setInteracting] = useState(false);
+  const [touching, setTouching] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [pageVisible, setPageVisible] = useState(() => !document.hidden);
   const reduced = useReducedMotion();
-  const running = visible && pageVisible && !paused && !hovered && !focused && !dragging && !reduced;
+  const running = visible && pageVisible && !interacting && !touching && !hovered && !focused && !dragging && !reduced;
+
+  const pauseForInteraction = () => {
+    if (resumeTimer.current !== null) window.clearTimeout(resumeTimer.current);
+    setInteracting(true);
+    resumeTimer.current = window.setTimeout(() => {
+      resumeTimer.current = null;
+      setInteracting(false);
+    }, 500);
+  };
+  const finishDrag = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    setDragging(false);
+    pauseForInteraction();
+  };
+
+  useEffect(() => () => {
+    if (resumeTimer.current !== null) window.clearTimeout(resumeTimer.current);
+  }, []);
 
   useEffect(() => {
     const update = () => setPageVisible(!document.hidden);
@@ -86,7 +106,6 @@ function EvidenceFilmstrip({ record }: { record: ResearchCase }) {
   const step = (direction: number) => {
     const view = viewport.current, group = firstGroup.current;
     if (!view || !group || !groupWidth.current) return;
-    setPaused(true);
     const distance = groupWidth.current / frames.length;
     let origin = wrap(view.scrollLeft, groupWidth.current);
     if (direction < 0 && origin < distance) origin += groupWidth.current;
@@ -94,25 +113,25 @@ function EvidenceFilmstrip({ record }: { record: ResearchCase }) {
     view.scrollTo({ left: origin + direction * distance, behavior: reduced ? "instant" : "smooth" });
   };
 
-  return <section className="evidence-filmstrip" ref={ref} aria-label={`Case ${record.id} recorded evidence`} data-running={running}>
+  return <section className="evidence-filmstrip" ref={ref} aria-label={`Case ${record.id} recorded evidence`} data-running={running}
+    onPointerEnter={event => { if (event.pointerType === "mouse") setHovered(true); }} onPointerLeave={() => setHovered(false)}>
     <div className="filmstrip-toolbar">
       <span className="filmstrip-heading"><i/> Recorded frames <small>{String(frames.length).padStart(2, "0")}</small></span>
-      <div className="filmstrip-controls">
-        <button type="button" onClick={() => step(-1)} aria-label="Previous evidence frame"><ArrowLeft size={15}/></button>
-        {!reduced && <button type="button" onClick={() => setPaused(value => !value)} aria-label={paused ? "Play evidence filmstrip" : "Pause evidence filmstrip"}>{paused ? <Play size={13}/> : <Pause size={13}/>}</button>}
-        <button type="button" onClick={() => step(1)} aria-label="Next evidence frame"><ArrowRight size={15}/></button>
-      </div>
     </div>
     <div className="filmstrip-viewport" ref={viewport} role="region" aria-label="Recorded frames; use arrow keys to browse" tabIndex={0} data-dragging={dragging}
-      onPointerEnter={event => { if (event.pointerType === "mouse") setHovered(true); }} onPointerLeave={() => setHovered(false)}
-      onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onWheel={() => setPaused(true)}
+      onFocus={event => setFocused(event.currentTarget.matches(":focus-visible"))} onBlur={() => setFocused(false)}
+      onWheel={pauseForInteraction}
+      onScroll={() => { if (resumeTimer.current !== null) pauseForInteraction(); }}
+      onTouchStart={() => { setTouching(true); setFocused(false); pauseForInteraction(); }}
+      onTouchEnd={event => { if (!event.touches.length) { setTouching(false); pauseForInteraction(); } }}
+      onTouchCancel={() => { setTouching(false); pauseForInteraction(); }}
       onKeyDown={event => {
-        if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); step(event.key === "ArrowRight" ? 1 : -1); }
-        if (event.key === "Home") { event.preventDefault(); setPaused(true); if (viewport.current) viewport.current.scrollLeft = 0; }
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); setFocused(true); step(event.key === "ArrowRight" ? 1 : -1); }
+        if (event.key === "Home") { event.preventDefault(); setFocused(true); if (viewport.current) viewport.current.scrollLeft = 0; }
       }}
       onPointerDown={event => {
-        setPaused(true);
         if (event.pointerType !== "mouse" || event.button !== 0) return;
+        setFocused(false);
         drag.current = { id: event.pointerId, x: event.clientX, offset: event.currentTarget.scrollLeft };
         event.currentTarget.setPointerCapture(event.pointerId);
         setDragging(true);
@@ -120,8 +139,8 @@ function EvidenceFilmstrip({ record }: { record: ResearchCase }) {
       onPointerMove={event => {
         if (drag.current?.id === event.pointerId) event.currentTarget.scrollLeft = wrap(drag.current.offset + drag.current.x - event.clientX, groupWidth.current);
       }}
-      onPointerUp={event => { drag.current = null; setDragging(false); if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
-      onPointerCancel={() => { drag.current = null; setDragging(false); }}>
+      onPointerUp={event => { finishDrag(); if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
+      onPointerCancel={finishDrag} onLostPointerCapture={finishDrag}>
       <div className="filmstrip-track">
         {[0, 1].map(copy => <div key={copy} className="filmstrip-group" ref={copy === 0 ? firstGroup : undefined} role={copy === 0 ? "list" : undefined} aria-hidden={copy === 1 ? true : undefined}>
           {frames.map((frame, index) => <figure key={frame.id} className="filmstrip-frame" role={copy === 0 ? "listitem" : undefined} data-evidence-id={frame.id}>

@@ -1,11 +1,8 @@
 .evidence-filmstrip { --frame-width:260px; --frame-gap:14px; min-width:0; padding:0 0 8px; }
-.filmstrip-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:2px 28px 14px; }
+.filmstrip-toolbar { padding:2px 28px 14px; }
 .filmstrip-heading { display:flex; align-items:center; gap:9px; font-size:12px; color:#b6ced1; }
 .filmstrip-heading > i { width:5px; height:5px; border-radius:50%; background:#91cdbd; box-shadow:0 0 10px #91cdbd33; }
 .filmstrip-heading small { font:10px var(--mono); color:#6f929d; margin-left:4px; }
-.filmstrip-controls { display:flex; gap:5px; }
-.filmstrip-controls button { display:grid; place-items:center; width:32px; height:30px; border:1px solid #85aeaf2e; border-radius:6px; color:#accdc8; background:#a6d7cc04; transition:background .2s,border-color .2s; }
-.filmstrip-controls button:hover { background:#8ecfc315; border-color:#a9d9ca77; }
 .filmstrip-viewport { overflow-x:auto; overflow-y:hidden; scrollbar-width:none; overscroll-behavior-x:contain; cursor:grab; user-select:none; mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent); }
 .filmstrip-viewport::-webkit-scrollbar { display:none; }
 .evidence-filmstrip .filmstrip-viewport[tabindex]:focus-visible { mask-image:none; outline-offset:-2px; }
@@ -23,4 +20,4 @@
 .filmstrip-frame-meta > span { color:#4f7781; font-size:9px; }
 .filmstrip-description { display:block; font-size:12px; line-height:18px; color:#c6dddf; white-space:nowrap; }
 @media(max-width:760px) { .evidence-filmstrip { --frame-width:236px; --frame-gap:12px; } .filmstrip-toolbar { padding-inline:22px; } .filmstrip-track { margin-left:22px; } }
-@media(max-width:420px) { .evidence-filmstrip { --frame-width:220px; --frame-gap:10px; } .filmstrip-toolbar { padding-inline:18px; gap:10px; } .filmstrip-track { margin-left:18px; } .filmstrip-description { font-size:11px; } .filmstrip-controls button { width:30px; } .filmstrip-viewport { mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 16px),transparent); } }
+@media(max-width:420px) { .evidence-filmstrip { --frame-width:220px; --frame-gap:10px; } .filmstrip-toolbar { padding-inline:18px; } .filmstrip-track { margin-left:18px; } .filmstrip-description { font-size:11px; } .filmstrip-viewport { mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 16px),transparent); } }
