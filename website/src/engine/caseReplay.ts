@@ -1,4 +1,5 @@
 import type { CaseNode, ResearchCase } from "../data/caseTypes";
+import recordedThinking from "../data/recordedThinking.json";
 
 export type ReplayEventKind = "thinking" | "tool" | "context" | "answer";
 
@@ -9,6 +10,9 @@ export interface ReplayEvent {
   label: string;
   text: string;
   durationMs: number;
+  provenance: "recorded" | "summary";
+  original?: (typeof recordedThinking.records)[number];
+  excerpt?: boolean;
 }
 
 export interface ReplayContextEntry {
@@ -58,7 +62,7 @@ function toolText(record: ResearchCase, node: CaseNode): string {
 
 function event(record: ResearchCase, node: CaseNode, kind: ReplayEventKind, text: string): ReplayEvent {
   const labels: Record<ReplayEventKind, string> = {
-    thinking: "Thinking", tool: "Tool call", context: "Context updated", answer: "Answer",
+    thinking: "Search intent", tool: "Tool call", context: "Context updated", answer: "Answer",
   };
   return {
     id: `${record.id}:${node.id}:${kind}`,
@@ -67,23 +71,38 @@ function event(record: ResearchCase, node: CaseNode, kind: ReplayEventKind, text
     label: labels[kind],
     text,
     durationMs: Math.min(3800, Math.max(1500, text.length * 20 + 500)),
+    provenance: kind === "tool" || kind === "answer" ? "recorded" : "summary",
   };
 }
 
-/** A curated replay of recorded searches; Thinking uses the concise display notes. */
+function thinkingEvent(record: ResearchCase, node: CaseNode): ReplayEvent {
+  const original = recordedThinking.records.find(item => item.caseId === record.id && item.nodeId === node.id);
+  if (!original) return event(record, node, "thinking", node.displayTrace?.intent ?? node.label);
+  let text = original.text;
+  if (text.length > 760) {
+    const paragraph = text.lastIndexOf("\n\n", 760);
+    const sentence = text.lastIndexOf(". ", 760);
+    const boundary = Math.max(paragraph > 320 ? paragraph : 0, sentence > 320 ? sentence + 1 : 0);
+    text = text.slice(0, boundary || text.lastIndexOf(" ", 760)).trimEnd();
+  }
+  return { ...event(record, node, "thinking", text), label: "Thinking", provenance: "recorded", original,
+    excerpt: text.length < original.text.length, durationMs: Math.max(2800, text.length * 25 + 900) };
+}
+
+/** Saved assistant prose where available; missing reasoning stays an explicitly labelled summary. */
 export function buildCaseReplay(record: ResearchCase): ReplayEvent[] {
   const events: ReplayEvent[] = [];
   for (const node of [...record.nodes].sort((a, b) => a.order - b.order)) {
     if (node.kind === "question") continue;
     if (node.kind === "answer") {
+      if (recordedThinking.records.some(item => item.caseId === record.id && item.nodeId === node.id)) {
+        events.push(thinkingEvent(record, node));
+      }
       events.push(event(record, node, "answer", record.answer));
       continue;
     }
-    events.push(
-      event(record, node, "thinking", node.displayTrace?.intent ?? node.label),
-      event(record, node, "tool", toolText(record, node)),
-      event(record, node, "context", node.displayTrace?.finding ?? node.summary),
-    );
+    events.push(thinkingEvent(record, node), event(record, node, "tool", toolText(record, node)),
+      event(record, node, "context", node.displayTrace?.finding ?? node.summary));
   }
   return events;
 }

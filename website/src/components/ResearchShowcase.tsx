@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, Check, ChevronRight, Code2, GitBranch, Layers3, Pause, Play, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, ChevronRight, Code2, GitBranch, Layers3, Pause, Play, RotateCcw, Sparkles, X } from "lucide-react";
 import records from "../data/researchCases.json";
 import type { ResearchCase } from "../data/caseTypes";
 import { buildCaseReplay, getDisplayEdges, getNodeNumber, getReplayState } from "../engine/caseReplay";
+import type { ReplayEvent } from "../engine/caseReplay";
 import { layoutReplayGraph, replayEdgePath } from "../engine/caseGraph";
 import { useReducedMotion, useVisibility } from "../hooks";
 import "../caseReplay.css";
@@ -60,6 +61,8 @@ function CaseReplay({ record }: { record: ResearchCase }) {
   const [pageVisible, setPageVisible] = useState(!document.hidden);
   const [following, setFollowing] = useState(true);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [originalEvent, setOriginalEvent] = useState<ReplayEvent | null>(null);
+  const originalDialog = useRef<HTMLDialogElement>(null);
   const log = useRef<HTMLDivElement>(null);
   const memory = useRef<HTMLDivElement>(null);
   const { ref, visible } = useVisibility<HTMLElement>("0px");
@@ -109,20 +112,23 @@ function CaseReplay({ record }: { record: ResearchCase }) {
   const toggle=()=>{if(state.complete)restart();else setPlaying(value=>!value);};
   const next=()=>seek(Math.min(events.length-1,cursor.index+1));
   const adapted=Number(record.id)===1;
+  const originalCount=events.filter(item=>item.original).length;
+  const showOriginal=(item:ReplayEvent)=>{setPlaying(false);setOriginalEvent(item);originalDialog.current?.showModal();};
   return <article className="replay-case" id={`case-${record.id}`} role="tabpanel" aria-labelledby={`case-tab-${record.id}`} ref={ref} data-event-index={cursor.index} data-context-count={state.contextEntries.length} data-complete={state.complete}>
     <div className="replay-question"><div><div className="replay-kicker"><span>CASE {record.id}</span><span>{adapted?"Adapted replay":"Recorded replay"}</span></div><h3>{record.question}</h3></div><span className="replay-retrieval-count">{record.stats.retrievals} searches <ArrowRight size={14}/> one answer</span></div>
     <div className="case-replay-workspace">
       <div className="replay-console">
-        <div className="replay-panel-heading"><span><Sparkles size={16}/> Thinking & tools</span><button className={`replay-live ${running?"is-running":""}`} onClick={toggle} disabled={reduced} aria-label={state.complete?"Replay search":playing?"Pause search replay":"Resume search replay"}><i/>{state.complete?"Replay":running?"Pause":"Resume"}</button></div>
+        <div className="replay-panel-heading"><span><Sparkles size={16}/> Reasoning & tools</span><button className={`replay-live ${running?"is-running":""}`} onClick={toggle} disabled={reduced} aria-label={state.complete?"Replay search":playing?"Pause search replay":"Resume search replay"}><i/>{state.complete?"Replay":running?"Pause":"Resume"}</button></div>
         <div className="replay-log-wrap">
-          <div className="replay-log" ref={log} role="region" aria-label="Recorded thinking summaries and tool calls" tabIndex={0} onWheel={e=>{if(e.deltaY<0)setFollowing(false);}} onTouchMove={()=>setFollowing(false)} onScroll={()=>{const el=log.current;if(el&&el.scrollHeight-el.scrollTop-el.clientHeight<20)setFollowing(true);}}>
-            <div className="replay-log-start"><span className="replay-start-icon"><Layers3 size={15}/></span><div><strong>Memory ready.</strong><p>Follow each search as the context grows.</p></div></div>
+          <div className="replay-log" ref={log} role="region" aria-label="Recorded reasoning, labelled intent summaries and tool calls" tabIndex={0} onWheel={e=>{if(e.deltaY<0)setFollowing(false);}} onTouchMove={()=>setFollowing(false)} onScroll={()=>{const el=log.current;if(el&&el.scrollHeight-el.scrollTop-el.clientHeight<20)setFollowing(true);}}>
+            <div className="replay-log-start"><span className="replay-start-icon"><Layers3 size={15}/></span><div><strong>Memory ready.</strong><p>{originalCount?`${originalCount} saved reasoning passage${originalCount===1?"":"s"}. Other steps are labelled summaries.`:"This log has tool calls only. Search intents are summaries."}</p></div></div>
             {events.slice(0,cursor.index+1).map((item,index)=>{
               const current=index===cursor.index, text=current?item.text.slice(0,characters):item.text;
               const Icon=item.kind==="tool"?Code2:item.kind==="context"?Layers3:item.kind==="answer"?Check:Sparkles;
               return <div key={item.id} className={`replay-entry ${item.kind} ${current?"is-current":""}`} data-event-kind={item.kind}>
-                <div className="replay-entry-label"><Icon size={13}/><span>{item.label}</span><span className="replay-entry-node">{getNodeNumber(record,item.nodeId)}</span></div>
+                <div className="replay-entry-label"><Icon size={13}/><span>{item.label}</span>{item.kind==="thinking"&&(item.original?<button className="replay-provenance recorded" onClick={()=>showOriginal(item)} aria-label={`Read original reasoning for node ${getNodeNumber(record,item.nodeId)}`}>Original</button>:<span className="replay-provenance">Summary</span>)}<span className="replay-entry-node">{getNodeNumber(record,item.nodeId)}</span></div>
                 {item.kind==="tool"?<pre><code>{text}</code>{current&&running&&characters<item.text.length&&<i className="replay-caret"/>}</pre>:<p>{text}{current&&running&&characters<item.text.length&&<i className="replay-caret"/>}</p>}
+                {item.excerpt&&(index<cursor.index||characters===item.text.length)&&<button className="replay-read-original" onClick={()=>showOriginal(item)}>Read full original · {item.original!.text.trim().split(/\s+/).length} words <ArrowRight size={12}/></button>}
               </div>;
             })}
           </div>
@@ -138,12 +144,16 @@ function CaseReplay({ record }: { record: ResearchCase }) {
     <div className="replay-controls"><button className="replay-play" onClick={toggle} disabled={reduced&&!state.complete} aria-label={`${state.complete?"Replay":playing?"Pause":"Play"} case ${record.id}`}>{running?<Pause size={15}/>:state.complete?<RotateCcw size={15}/>:<Play size={15}/>}<span>{state.complete?"Replay":playing?"Pause":"Play"}</span></button><input aria-label={`Case ${record.id} replay progress`} type="range" min="0" max={events.length-1} value={cursor.index} onChange={e=>seek(Number(e.target.value))} style={{background:`linear-gradient(90deg,#91ddcd ${progress*100}%,#29404b ${progress*100}%)`}}/><span className="replay-percentage">{Math.round(progress*100)}%</span><button className="replay-next" onClick={next} disabled={state.complete} aria-label={`Next step in case ${record.id}`}><span>Next</span><ChevronRight size={17}/></button><button className="replay-restart" onClick={restart} aria-label={`Restart case ${record.id}`} title="Restart"><RotateCcw size={16}/></button></div>
     {state.complete&&<div className="replay-answer"><span><Check size={16}/></span><div><small>THE ANSWER</small><p>{record.answer}</p></div></div>}
     <p className="replay-accessible-status" role="status" aria-live="polite">{event.label}. {state.contextEntries.length} context updates. {state.visibleNodeIds.length} nodes.</p>
-    <details className="replay-source" onToggle={e=>setArchiveOpen(e.currentTarget.open)}><summary>About this replay <ChevronRight size={14}/></summary><div><p>Thinking summarizes the recorded search intent. Tool names and search parameters come from the original trajectory. Context updates summarize retrieved evidence.</p>{adapted&&<p>The display connects nodes 02, 06 and 07 to the answer. The recorded answer cites node 02; nodes 06 and 07 revisit the same clip and are shown as additional synthesis connections.</p>}<p>{record.sourceNote} {record.quality.note}</p>{archiveOpen&&<div className="replay-evidence-archive">{record.nodes.filter(node=>node.previewEvidenceId).map(node=>{const frame=record.evidence.find(item=>item.id===node.previewEvidenceId);return frame?<figure key={node.id}><img src={frame.image} alt={`${node.label}: ${frame.timestamp}`} loading="lazy"/><figcaption>{getNodeNumber(record,node.id)} · {frame.timestamp}</figcaption></figure>:null;})}</div>}</div></details>
+    <dialog ref={originalDialog} className="replay-original-dialog" aria-labelledby={`original-title-${record.id}`} onClick={e=>{if(e.target===originalDialog.current)originalDialog.current.close();}}>
+      <button className="replay-original-close" aria-label="Close original reasoning" onClick={()=>originalDialog.current?.close()}><X size={19}/></button>
+      {originalEvent?.original&&<><div className="replay-original-kicker">CASE {record.id} / ORIGINAL ASSISTANT TEXT</div><h3 id={`original-title-${record.id}`}>{record.nodes.find(node=>node.id===originalEvent.nodeId)?.label}</h3><p className="replay-original-location">{originalEvent.original.sourceFile} · trajs[{originalEvent.original.trajectoryIndex}][{originalEvent.original.messageIndex}].content</p><div className="replay-original-text">{originalEvent.original.text}</div></>}
+    </dialog>
+    <details className="replay-source" onToggle={e=>setArchiveOpen(e.currentTarget.open)}><summary>About this replay <ChevronRight size={14}/></summary><div><p>Thinking / Original is unchanged assistant prose saved before a tool call. Search intent / Summary is an editorial description where no separate reasoning was saved. Tool names and search parameters come from the original trajectory; context updates summarize the retrieved evidence.</p>{adapted&&<p>The display connects nodes 02, 06 and 07 to the answer. The recorded answer cites node 02; nodes 06 and 07 revisit the same clip and are shown as additional synthesis connections.</p>}<p>{record.sourceNote} {record.quality.note}</p>{archiveOpen&&<div className="replay-evidence-archive">{record.nodes.filter(node=>node.previewEvidenceId).map(node=>{const frame=record.evidence.find(item=>item.id===node.previewEvidenceId);return frame?<figure key={node.id}><img src={frame.image} alt={`${node.label}: ${frame.timestamp}`} loading="lazy"/><figcaption>{getNodeNumber(record,node.id)} · {frame.timestamp}</figcaption></figure>:null;})}</div>}</div></details>
   </article>;
 }
 
 export default function ResearchCases() {
-  const [active,setActive]=useState(0);
+  const [active,setActive]=useState(()=>Math.max(0,cases.findIndex(record=>record.id===new URLSearchParams(window.location.search).get("case"))));
   const select=(index:number)=>setActive((index+cases.length)%cases.length);
   return <section className="research-cases replay-cases"><div className="cases-intro"><div><div className="replay-section-kicker"><span/> DEEP SEARCH, IN MOTION</div><h2>Watch the search.<br/><span>See the connections.</span></h2></div><p>One thought leads to a search.<br/>Every result builds the context.</p></div><div className="case-tabs replay-tabs" role="tablist" aria-label="Research cases">{cases.map((record,index)=><button role="tab" key={record.id} id={`case-tab-${record.id}`} aria-controls={`case-${record.id}`} aria-selected={active===index} tabIndex={active===index?0:-1} onClick={()=>select(index)} onKeyDown={e=>{if(e.key==="ArrowLeft"||e.key==="ArrowRight"){e.preventDefault();const next=(index+(e.key==="ArrowRight"?1:-1)+cases.length)%cases.length;select(next);document.getElementById(`case-tab-${cases[next].id}`)?.focus();}}}><span className="case-tab-number">0{index+1} / {patterns[index]}</span><div><strong>{names[index]}</strong><MiniGraph index={index}/></div></button>)}</div><CaseReplay key={cases[active].id} record={cases[active]}/></section>;
 }
