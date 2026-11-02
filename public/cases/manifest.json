@@ -1,0 +1,18 @@
+{
+  "sources": [
+    "case_13.json",
+    "case_04.json",
+    "case_08.json",
+    "case_01.json"
+  ],
+  "imageCount": 129,
+  "imageTransforms": "cam0 BGR array -> RGB -> max 480px longest edge -> JPEG quality 78",
+  "originalGraphEdges": 25,
+  "exportedImageBytes": 5520676,
+  "notes": [
+    "All image_path references from each original traj were deduplicated by sequence and source filename.",
+    "A node evidenceIds list contains images visible in its recorded step; retrievedEvidenceIds contains only images following a search call.",
+    "Final citations are the original answer.parent_ids, with no extra inferred merge edges.",
+    "Only graph evidence summaries are exported; raw system prompts and private step reasoning remain in the source."
+  ]
+}

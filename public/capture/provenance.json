@@ -1,0 +1,82 @@
+{
+  "dataset": "CODa",
+  "sequence": 0,
+  "source": "nav_benchmark/frames/0 and its corresponding coda/raw files",
+  "modality": "OS1 motion-compensated LiDAR, rectified cam0 RGB, dense LiDAR poses",
+  "frame_indices": [
+    800,
+    840,
+    880,
+    920,
+    960,
+    1000,
+    1040,
+    1080,
+    1120,
+    1160,
+    1200,
+    1240,
+    1280,
+    1320,
+    1360,
+    1400,
+    1440,
+    1480,
+    1520,
+    1560,
+    6600,
+    6640,
+    6680,
+    6720,
+    6760,
+    6800,
+    6840,
+    6880,
+    6920,
+    6960,
+    7000,
+    7040,
+    7080,
+    7120,
+    7160,
+    7200,
+    7240,
+    7280,
+    7320,
+    7360
+  ],
+  "source_paths": {
+    "pointcloud": "3d_comp/os1/0/3d_comp_os1_0_{index}.bin",
+    "camera": "2d_rect/cam0/0/2d_rect_cam0_0_{index}.png",
+    "poses": "poses/dense/0.txt",
+    "projection": "calibrations/0/calib_os1_to_cam0.yaml"
+  },
+  "transform": {
+    "world_to_render": [
+      "(world_x + 49) * 0.2",
+      "max(0.015, (world_z + 3.55) * 0.1)",
+      "-(world_y - 57) * 0.2"
+    ],
+    "world_rectangle_center_xy": [
+      -49.0,
+      57.0
+    ],
+    "world_rectangle_m": [
+      60.0,
+      40.0
+    ],
+    "height_display_scale_relative_to_xy": 0.5,
+    "point_frame": "sensor XYZ -> pose quaternion [qx,qy,qz,qw] rotation + translation -> crop -> normalized render coordinates"
+  },
+  "point_count": 48000,
+  "input_points_in_crop": 2814560,
+  "colored_input_points": 554062,
+  "raster": "1536x1024 orthographic top-down render of highest colored surface; nearest splats limited to 3 pixels (~12 cm). Dark areas have no colored measurements. No satellite, aerial, or generated photo.",
+  "limitations": [
+    "Sparse ground-based sampling cannot recover unseen roof surfaces.",
+    "Moving objects and residual pose error may leave ghosting.",
+    "Camera colors use projected LiDAR samples; no learned texture completion.",
+    "Vertical scale is compressed by 0.5 for stacked presentation.",
+    "Top reasoning layer and QA remain an authored teaching trace, separate from this recorded example."
+  ]
+}
