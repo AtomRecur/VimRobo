@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Line, OrbitControls } from "@react-three/drei";
 import { RotateCcw } from "lucide-react";
@@ -9,7 +9,7 @@ import type { ReasoningState } from "../engine/reasoning";
 import { reasoningLayout } from "../data/layerScene";
 import type { LayerScene } from "../data/layerScene";
 import { useReducedMotion } from "../hooks";
-import { createSceneShell, deviceProfile, loadPreviewParts, loadEnvironmentDetail, loadScanDetail, loadMapDetail } from "../engine/sceneAssets";
+import { createSceneShell, deviceProfile, loadPreviewParts, loadEnvironmentDetail, loadScanDetail, loadMapDetail, mergeSceneAssets, scheduleSceneDetail } from "../engine/sceneAssets";
 import type { SceneAssets } from "../engine/sceneAssets";
 import type { PointCloud } from "../engine/pointCloud";
 import FrameworkDock from "./FrameworkDock";
@@ -28,19 +28,26 @@ function Elevation({ spread, from, to, children }: { spread: RefObject<number>; 
   return <group ref={group} position={[0, initialY.current, 0]}>{children}</group>;
 }
 
-function Plate({ width, depth, color, grid = false }: { width: number; depth: number; color: string; grid?: boolean }) {
+const Plate = memo(function Plate({ width, depth, color, grid = false }: { width: number; depth: number; color: string; grid?: boolean }) {
   const outline: Vec3[] = [[-width/2,0,-depth/2],[width/2,0,-depth/2],[width/2,0,depth/2],[-width/2,0,depth/2],[-width/2,0,-depth/2]];
+  const gridPoints = useMemo(() => {
+    const points: Vec3[] = [];
+    if (grid) {
+      for (let i = 0; i < 11; i++) points.push([-width/2,0.002,-depth/2+i*depth/10], [width/2,0.002,-depth/2+i*depth/10]);
+      for (let i = 0; i < 13; i++) points.push([-width/2+i*width/12,0.002,-depth/2], [-width/2+i*width/12,0.002,depth/2]);
+    }
+    return points;
+  }, [width, depth, grid]);
   return <group>
     <mesh rotation={[-Math.PI/2,0,0]}>
       <planeGeometry args={[width, depth]} />
       <meshBasicMaterial color={color} transparent opacity={0.028} side={THREE.DoubleSide} depthWrite={false} />
     </mesh>
     <Line points={outline} color={color} transparent opacity={0.36} lineWidth={0.8} />
-    {grid && Array.from({length: 11}, (_,i) => <Line key={i} points={[[-width/2,0.002,-depth/2+i*depth/10],[width/2,0.002,-depth/2+i*depth/10]]} color={color} transparent opacity={0.065} lineWidth={0.55} />)}
-    {grid && Array.from({length: 13}, (_,i) => <Line key={`v${i}`} points={[[-width/2+i*width/12,0.002,-depth/2],[-width/2+i*width/12,0.002,depth/2]]} color={color} transparent opacity={0.065} lineWidth={0.55} />)}
+    {grid && <Line segments points={gridPoints} color={color} transparent opacity={0.065} lineWidth={0.55} />}
     {[-1,1].flatMap(x => [-1,1].map(z => <Line key={`${x}${z}`} points={[[x*(width/2-.5),0.01,z*depth/2],[x*width/2,0.01,z*depth/2],[x*width/2,0.01,z*(depth/2-.5)]]} color={color} lineWidth={1.8} />))}
   </group>;
-}
+});
 
 function EnvironmentLayer({ scene, assets }: { scene: LayerScene; assets: SceneAssets }) {
   const map = useMemo(() => {
@@ -80,11 +87,13 @@ function RecordedSurfaces({cloud,pointSize}:{cloud:PointCloud;pointSize:number})
     fragmentShader:`varying vec3 vColor; void main(){float r=length(gl_PointCoord-.5);if(r>.49)discard;gl_FragColor=vec4(vColor,1.);
       #include <colorspace_fragment>
     }`,
-    uniforms:{uSize:{value:pointSize},uHeight:{value:1000}},
+    uniforms:{uSize:{value:.044},uHeight:{value:1000}},
     depthWrite:true,transparent:false,toneMapped:false,
-  }),[pointSize]);
+  }),[]);
+  useEffect(()=>{material.uniforms.uSize.value=pointSize;},[material,pointSize]);
   useFrame(({size,gl})=>{material.uniforms.uHeight.value=size.height*gl.getPixelRatio();});
-  useEffect(()=>()=>{geometry.dispose();material.dispose();},[geometry,material]);
+  useEffect(()=>()=>geometry.dispose(),[geometry]);
+  useEffect(()=>()=>material.dispose(),[material]);
   return <points geometry={geometry} material={material}/>;
 }
 
@@ -129,7 +138,8 @@ function ScanLayer({ scene, cloud, reduced }: { scene: LayerScene; cloud: PointC
     transparent: true, depthWrite: false, blending: THREE.NormalBlending,
   }), [scene.depth, reduced]);
   const sweep = useRef<THREE.Mesh>(null);
-  useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => material.dispose(), [material]);
   useFrame(({clock}) => {
     material.uniforms.uTime.value = clock.elapsedTime;
     if (sweep.current) sweep.current.position.z = ((clock.elapsedTime*.11)%1-.5)*scene.depth;
@@ -284,38 +294,33 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
   useEffect(()=>{
     let active=true;
     setLoadFailed(false);
-    loadPreviewParts(overview,patch=>{if(active)setAssets(current=>({...current,...patch} as SceneAssets));})
+    loadPreviewParts(overview,patch=>{if(active)setAssets(current=>current?mergeSceneAssets(current,patch):patch as SceneAssets);})
       .catch(error=>{console.warn("VimRobo: scene details can be retried",error);if(active)setLoadFailed(true);});
     return()=>{active=false;};
   },[overview,loadAttempt]);
   useEffect(()=>{
     if(!previewReady||!scene||!overview||!visible||!pageVisible||profile.saveData)return;
     let active=true;
-    const apply=(patch:Partial<SceneAssets>)=>{if(active)setAssets(current=>{
-      if(!current)return current;
-      if(patch.environment&&(current.environment?.pointCount??0)>patch.environment.pointCount)return current;
-      if(patch.scan&&current.scan.pointCount>patch.scan.pointCount)return current;
-      if(patch.map&&(current.map?.width??0)>patch.map.width)return current;
-      return {...current,...patch};
-    });};
+    const apply=(patch:Partial<SceneAssets>)=>{if(active)setAssets(current=>current?mergeSceneAssets(current,patch):current);};
     const keepPreview=(error:unknown)=>console.warn("VimRobo: keeping the loaded scene while detail is unavailable",error);
-    const timer=window.setTimeout(()=>{
+    const cancel=scheduleSceneDetail(()=>{
       loadEnvironmentDetail(true).then(environment=>apply({environment,pointSize:.016})).catch(keepPreview);
       loadScanDetail(false).then(scan=>apply({scan})).catch(keepPreview);
       loadMapDetail(true).then(map=>apply({map})).catch(keepPreview);
-    },2500);
-    return()=>{active=false;window.clearTimeout(timer);};
+    });
+    return()=>{active=false;cancel();};
   },[previewReady,scene,overview,visible,pageVisible,profile]);
   useEffect(()=>{
     // Full desktop geometry is requested only after someone explores the map.
     if(!previewReady||!scene||!overview||!detailRequested||dragging||!visible||!pageVisible||profile.saveData||profile.compact)return;
     let active=true;
-    const timer=window.setTimeout(()=>{
-      loadEnvironmentDetail(false).then(environment=>{if(active)setAssets(current=>current?{...current,environment,pointSize:.009}:current);}).catch(()=>{});
-      loadScanDetail().then(scan=>{if(active)setAssets(current=>current?{...current,scan}:current);}).catch(()=>{});
-      loadMapDetail(false).then(map=>{if(active)setAssets(current=>current?{...current,map}:current);}).catch(()=>{});
-    },2500);
-    return()=>{active=false;window.clearTimeout(timer);};
+    const apply=(patch:Partial<SceneAssets>)=>{if(active)setAssets(current=>current?mergeSceneAssets(current,patch):current);};
+    const cancel=scheduleSceneDetail(()=>{
+      loadEnvironmentDetail(false).then(environment=>apply({environment,pointSize:.009})).catch(()=>{});
+      loadScanDetail().then(scan=>apply({scan})).catch(()=>{});
+      loadMapDetail(false).then(map=>apply({map})).catch(()=>{});
+    });
+    return()=>{active=false;cancel();};
   },[previewReady,scene,overview,detailRequested,dragging,visible,pageVisible,profile]);
   useEffect(()=>{
     const update=()=>setPageVisible(!document.hidden);

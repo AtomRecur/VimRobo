@@ -17,17 +17,18 @@ class SceneBoundary extends Component<{ children: ReactNode; onError: () => void
 
 export default function SandboxView(props: React.ComponentProps<typeof Sandbox>) {
   const { ref, visible, everVisible } = useVisibility<HTMLDivElement>();
+  const shouldMount = !!props.hero || everVisible;
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const ready = useCallback(() => setStatus("ready"), []);
   const failed = useCallback(() => setStatus("error"), []);
   useEffect(() => {
-    if (everVisible) void loadScenePreview(!!props.overview).catch(() => {});
-  }, [everVisible, props.overview]);
+    if (shouldMount) void loadScenePreview(!!props.overview).catch(() => {});
+  }, [shouldMount, props.overview]);
   return <div className="sandbox-canvas" ref={ref} data-scene-status={status} aria-busy={status === "loading"}>
     <div className="sandbox-live">
       <SceneBoundary onError={failed}>
         <Suspense fallback={null}>
-          {everVisible && <Sandbox {...props} visible={visible} onReady={ready} />}
+          {shouldMount && <Sandbox {...props} visible={visible} onReady={ready} />}
         </Suspense>
       </SceneBoundary>
     </div>

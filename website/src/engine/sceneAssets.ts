@@ -11,7 +11,7 @@ export interface SceneAssets {
   pointSize: number;
 }
 
-const optimized = "capture-dense/optimized-v1/";
+const optimized = "capture-dense/optimized-v2/";
 const shellScene: LayerScene = {
   ...shell,
   extentMeters: [shell.extentMeters[0], shell.extentMeters[1]],
@@ -78,6 +78,36 @@ function mapImage(path: string, priority: RequestPriority = "auto") {
 
 export function createSceneShell(): SceneAssets {
   return { scene: shellScene, scan: { positions: new Float32Array(0), pointCount: 0 }, map: null, pointSize: .044 };
+}
+
+/** Late previews/retries must never replace a sharper layer already on screen. */
+export function mergeSceneAssets(current: SceneAssets, patch: Partial<SceneAssets>): SceneAssets {
+  const next = { ...current, ...patch };
+  if (patch.environment && (current.environment?.pointCount ?? 0) > patch.environment.pointCount) {
+    next.environment = current.environment;
+    next.pointSize = current.pointSize;
+  }
+  if (patch.scan && current.scan.pointCount > patch.scan.pointCount) next.scan = current.scan;
+  if (patch.map && (current.map?.width ?? 0) > patch.map.width) next.map = current.map;
+  return next;
+}
+
+/** Let the preview paint, then start background downloads in the next idle slot. */
+export function scheduleSceneDetail(load: () => void): () => void {
+  let idle: number | undefined;
+  let timer: number | undefined;
+  const frame = window.requestAnimationFrame(() => {
+    if (typeof window.requestIdleCallback === "function") {
+      idle = window.requestIdleCallback(load, { timeout: 200 });
+    } else {
+      timer = window.setTimeout(load, 0);
+    }
+  });
+  return () => {
+    window.cancelAnimationFrame(frame);
+    if (idle !== undefined) window.cancelIdleCallback(idle);
+    if (timer !== undefined) window.clearTimeout(timer);
+  };
 }
 
 /** Reveal the real layers independently; one late file never hides the rest. */

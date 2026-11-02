@@ -4,8 +4,31 @@ import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { decodePointCloud } from "../src/engine/pointCloud.ts";
 
-const directory = "public/capture-dense/optimized-v1/";
+const directory = "public/capture-dense/optimized-v2/";
+const baselineDirectory = "public/capture-dense/optimized-v1/";
 const manifest = JSON.parse(readFileSync(directory + "manifest.json", "utf8"));
+
+function decodeFile(path: string) {
+  const raw = gunzipSync(readFileSync(path));
+  return decodePointCloud(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
+}
+
+test("lossless packing preserves every decoded position and RGB byte in every previous detail tier", () => {
+  for (const descriptor of [...Object.values(manifest.environment), ...Object.values(manifest.scan)] as any[]) {
+    const packed = decodeFile(directory + descriptor.file);
+    const previous = decodeFile(baselineDirectory + descriptor.file);
+    assert.equal(packed.pointCount, previous.pointCount);
+    assert.deepEqual(new Uint8Array(packed.positions.buffer), new Uint8Array(previous.positions.buffer), descriptor.file);
+    assert.deepEqual(packed.colors, previous.colors, descriptor.file);
+    assert.ok(readFileSync(directory + descriptor.file).length < readFileSync(baselineDirectory + descriptor.file).length);
+  }
+});
+
+test("map and poster images retain exactly the same encoded bytes", () => {
+  for (const file of [manifest.map.preview, manifest.map.mid, manifest.map.full, manifest.poster]) {
+    assert.deepEqual(readFileSync(directory + file), readFileSync(baselineDirectory + file), file);
+  }
+});
 
 test("the immediate 3D framework uses the recorded footprint, evidence anchors, and route endpoints", () => {
   const shell = JSON.parse(readFileSync("src/data/sceneShell.json", "utf8"));
@@ -56,4 +79,10 @@ test("truncated or invalid downloads are rejected before allocating GPU geometry
   const invalid = buffer.slice(0);
   new DataView(invalid).setUint32(4, 0xffffffff, true);
   assert.throws(() => decodePointCloud(invalid), /format/);
+  const unsupported = buffer.slice(0);
+  new DataView(unsupported).setUint32(8, 16, true);
+  assert.throws(() => decodePointCloud(unsupported), /format/);
+  const invalidColorFlags = buffer.slice(0);
+  new DataView(invalidColorFlags).setUint32(8, 8, true);
+  assert.throws(() => decodePointCloud(invalidColorFlags), /format/);
 });

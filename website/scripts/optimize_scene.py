@@ -5,15 +5,20 @@ Requires NumPy and Pillow. Run from any directory with:
     python3 website/scripts/optimize_scene.py
 
 The originals are never modified. VPC1 is gzip-compressed and little-endian:
-  0: magic 'VPC1'; 4: uint32 count; 8: uint32 flags (RGB=1, delta=2)
+  0: magic 'VPC1'; 4: uint32 count; 8: uint32 flags
+     (RGB=1, delta=2, byte-shuffle=4, RGB-decorrelation=8)
  12: float32 minimum XYZ; 24: float32 step XYZ; 36: planar uint16 XYZ
 Each coordinate plane contains modulo-65536 deltas, starting from zero.
-Original interleaved uint8 RGB follows the three planes when flag 1 is set.
+Flag 4 groups low bytes then high bytes within each coordinate plane.
+RGB follows when flag 1 is set; flag 8 stores planar (R-G, G, B-G) modulo 256
+instead of interleaved RGB. Both packing transforms are exactly reversible.
 Decode each plane with a modulo-65536 prefix sum, then min + value * step.
 
 Morton sorting improves locality; reduced levels select evenly across that
 whole ordering. Every selected coordinate and color comes from the originals.
 Every emitted point is decoded and checked, including Float32 buffer rounding.
+When optimized-v1 exists (or --baseline is supplied), all decoded position and
+color bytes must match it exactly; existing map/poster bytes are copied unchanged.
 """
 
 from __future__ import annotations
@@ -23,6 +28,7 @@ import gzip
 import hashlib
 import io
 import json
+import shutil
 import struct
 from pathlib import Path
 
@@ -33,6 +39,8 @@ from PIL import Image
 HEADER = struct.Struct('<4sII6f')
 COLOR_FLAG = 1
 DELTA_FLAG = 2
+SHUFFLE_FLAG = 4
+DECORRELATE_FLAG = 8
 ERROR_EPSILON = 1e-6
 MAX_DISPLAY_ERROR = 0.0002
 
@@ -96,34 +104,48 @@ def gzip_bytes(data: bytes) -> bytes:
 def decode_cloud(path: Path):
     raw = gzip.decompress(path.read_bytes())
     magic, count, flags, *bounds = HEADER.unpack_from(raw)
-    if magic != b'VPC1' or flags & ~3 or not flags & DELTA_FLAG:
+    if (magic != b'VPC1' or flags & ~15 or not flags & DELTA_FLAG
+            or (flags & DECORRELATE_FLAG and not flags & COLOR_FLAG)):
         raise ValueError('Invalid VPC1 header')
     expected = HEADER.size + count * (9 if flags & COLOR_FLAG else 6)
     if len(raw) != expected:
         raise ValueError(f'Incorrect decoded length: {len(raw)} != {expected}')
-    deltas = np.frombuffer(raw, dtype='<u2', count=count * 3, offset=HEADER.size)
-    values = (np.cumsum(deltas.reshape(3, count), axis=1, dtype=np.uint64) & 65535).T
+    if flags & SHUFFLE_FLAG:
+        planes = np.frombuffer(raw, dtype=np.uint8, count=count * 6, offset=HEADER.size).reshape(3, 2, count)
+        deltas = planes[:, 0].astype(np.uint16) | (planes[:, 1].astype(np.uint16) << 8)
+    else:
+        deltas = np.frombuffer(raw, dtype='<u2', count=count * 3, offset=HEADER.size).reshape(3, count)
+    values = (np.cumsum(deltas, axis=1, dtype=np.uint64) & 65535).T
     minimum, step = np.array(bounds[:3]), np.array(bounds[3:])
     # Match JavaScript Number arithmetic followed by a Float32Array assignment.
     positions = (minimum + values.astype(np.float64) * step).astype('<f4')
     colors = None
     if flags & COLOR_FLAG:
-        colors = np.frombuffer(raw, dtype=np.uint8, offset=HEADER.size + count * 6).reshape(-1, 3)
+        colors = np.frombuffer(raw, dtype=np.uint8, offset=HEADER.size + count * 6)
+        if flags & DECORRELATE_FLAG:
+            colors = colors.reshape(3, count).T.copy()
+            colors[:, 0] += colors[:, 1]
+            colors[:, 2] += colors[:, 1]
+        else:
+            colors = colors.reshape(-1, 3)
     return positions, colors, len(raw)
 
 
 def write_level(output: Path, name: str, cloud, count: int, point_size: float,
-                position_name: str, color_name: str | None) -> dict:
+                position_name: str, color_name: str | None, baseline: Path | None = None) -> dict:
     positions, colors, minimum, maximum, step, quantized, order = cloud
     selected = order[evenly_spaced_indices(len(order), count)]
     selected_values = quantized[selected]
     deltas = selected_values.T.copy()
     deltas[:, 1:] = np.subtract(selected_values[1:].T, selected_values[:-1].T, dtype=np.uint16)
-    flags = DELTA_FLAG | (COLOR_FLAG if colors is not None else 0)
+    flags = DELTA_FLAG | SHUFFLE_FLAG | (COLOR_FLAG | DECORRELATE_FLAG if colors is not None else 0)
     header = HEADER.pack(b'VPC1', count, flags, *minimum, *step)
-    raw = header + deltas.astype('<u2', copy=False).tobytes(order='C')
+    raw = header + deltas.astype('<u2', copy=False).view(np.uint8).reshape(3, count, 2).transpose(0, 2, 1).tobytes()
     if colors is not None:
-        raw += colors[selected].tobytes(order='C')
+        decorrelated = colors[selected].copy()
+        decorrelated[:, 0] -= decorrelated[:, 1]
+        decorrelated[:, 2] -= decorrelated[:, 1]
+        raw += decorrelated.T.tobytes()
     path = output / f'{name}.vpc.gz'
     path.write_bytes(gzip_bytes(raw))
 
@@ -139,6 +161,13 @@ def write_level(output: Path, name: str, cloud, count: int, point_size: float,
         raise ValueError(f'{name}: original RGB values changed')
     if len(np.unique(selected)) != count:
         raise ValueError(f'{name}: duplicate source indices')
+    if baseline:
+        previous_positions, previous_colors, _ = decode_cloud(baseline / path.name)
+        if decoded_positions.tobytes() != previous_positions.tobytes():
+            raise ValueError(f'{name}: decoded Float32 coordinates differ from the baseline')
+        if ((decoded_colors is None) != (previous_colors is None)
+                or (decoded_colors is not None and decoded_colors.tobytes() != previous_colors.tobytes())):
+            raise ValueError(f'{name}: RGB bytes differ from the baseline')
     samples = []
     for encoded_index in evenly_spaced_indices(count, min(9, count)):
         original_index = int(selected[encoded_index])
@@ -163,6 +192,7 @@ def write_level(output: Path, name: str, cloud, count: int, point_size: float,
             'sourceColorsFile': f'../{color_name}' if color_name else None,
             'sourcePointCount': len(positions),
             'allPointsChecked': True,
+            'baselineDecodedBytesExact': bool(baseline),
             'allSourcePointsRetained': count == len(positions),
             'colorsExact': True if colors is not None else None,
             'minimum': minimum.tolist(),
@@ -230,9 +260,18 @@ def main() -> None:
     parser.add_argument('--source', type=Path,
                         default=Path(__file__).resolve().parents[1] / 'public' / 'capture-dense')
     parser.add_argument('--output', type=Path)
+    parser.add_argument('--baseline', type=Path,
+                        help='Previous optimized assets to verify exactly and reuse images from (defaults to source/optimized-v1 when present)')
     args = parser.parse_args()
     source = args.source.resolve()
-    output = (args.output or source / 'optimized-v1').resolve()
+    output = (args.output or source / 'optimized-v2').resolve()
+    baseline = (args.baseline or source / 'optimized-v1').resolve()
+    if not baseline.exists():
+        if args.baseline:
+            raise ValueError(f'Baseline does not exist: {baseline}')
+        baseline = None
+    if output == baseline:
+        raise ValueError('Output must not overwrite the baseline assets')
     output.mkdir(parents=True, exist_ok=True)
     scene = json.loads((source / 'scene.json').read_text())
     env = scene['environment']
@@ -245,15 +284,17 @@ def main() -> None:
     if len(environment[0]) != env['pointCount'] or len(scan[0]) != scene['pointCount']:
         raise ValueError('Source counts do not match scene.json')
     manifest = {
-        'version': 1,
+        'version': 2,
         'sourceScene': '../scene.json',
         'format': {
             'magic': 'VPC1', 'compression': 'gzip', 'byteOrder': 'little-endian',
             'headerBytes': HEADER.size, 'countOffset': 4, 'flagsOffset': 8,
             'minimumOffset': 12, 'stepOffset': 24, 'colorsFlag': COLOR_FLAG,
             'deltaPositionsFlag': DELTA_FLAG,
-            'positions': 'three planar uint16 axes; modulo-65536 deltas from zero',
-            'colors': 'optional interleaved original uint8 RGB',
+            'shuffledBytesFlag': SHUFFLE_FLAG,
+            'decorrelatedColorsFlag': DECORRELATE_FLAG,
+            'positions': 'three planar uint16 axes; modulo-65536 deltas from zero; low bytes then high bytes per axis',
+            'colors': 'optional planar uint8 (R-G modulo 256, G, B-G modulo 256); reconstructs original RGB exactly',
             'order': 'stable 16-bit XYZ Morton order',
             'sampling': 'evenly spaced Morton indices, including both endpoints',
         },
@@ -264,13 +305,23 @@ def main() -> None:
                                ('full', env['pointCount'], env['pointSize'])):
         manifest['environment'][level] = write_level(
             output, f'environment-{level}', environment, count, size,
-            env['positionsFile'], env['colorsFile'])
+            env['positionsFile'], env['colorsFile'], baseline)
     for level, count, size in (('preview', 16_000, .04), ('mid', 80_000, .02), ('full', scene['pointCount'], .009)):
         manifest['scan'][level] = write_level(
-            output, f'scan-{level}', scan, count, size, scene['positionsFile'], None)
-    manifest['map'] = write_maps(source, output, scene['baseMap'])
-    manifest['poster'] = 'poster.webp'
-    manifest['posterMetadata'] = write_poster(source, output, scene['preview'])
+            output, f'scan-{level}', scan, count, size, scene['positionsFile'], None, baseline)
+    if baseline:
+        previous = json.loads((baseline / 'manifest.json').read_text())
+        for name in ('map-preview.webp', 'map-mid.webp', 'map-full.webp', 'poster.webp'):
+            shutil.copyfile(baseline / name, output / name)
+            if sha256(output / name) != sha256(baseline / name):
+                raise ValueError(f'{name}: baseline image bytes changed')
+        manifest['map'] = previous['map']
+        manifest['poster'] = previous['poster']
+        manifest['posterMetadata'] = previous['posterMetadata']
+    else:
+        manifest['map'] = write_maps(source, output, scene['baseMap'])
+        manifest['poster'] = 'poster.webp'
+        manifest['posterMetadata'] = write_poster(source, output, scene['preview'])
     descriptors = [*manifest['environment'].values(), *manifest['scan'].values()]
     original_bytes = sum(source_files[name]['bytes'] for name in full_source_names)
     preview_bytes = (manifest['environment']['preview']['bytes'] + manifest['scan']['preview']['bytes']
@@ -283,6 +334,8 @@ def main() -> None:
         'fullEnvironmentRetainsEverySourcePoint': True,
         'fullScanRetainsEverySourcePoint': True,
         'allColorBytesExact': True,
+        'baselineDecodedBytesExact': bool(baseline),
+        'baselineImageBytesExact': bool(baseline),
         'maxCoordinateError': max(item['verification']['maxCoordinateError'] for item in descriptors),
         'maxAllowedCoordinateError': MAX_DISPLAY_ERROR,
         'originalAssetBytes': original_bytes,

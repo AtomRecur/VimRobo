@@ -8,8 +8,17 @@ export default defineConfig({
       order: "post",
       handler(_html, context) {
         return Object.values(context.bundle ?? {})
-          .filter(chunk => chunk.type === "chunk" && ["three-core", "FloatingSandbox"].includes(chunk.name))
-          .map(chunk => ({ tag: "link", attrs: { rel: "modulepreload", crossorigin: "", href: `./${chunk.fileName}` }, injectTo: "head" as const }));
+          .flatMap(chunk => {
+            if (chunk.type !== "chunk" || !["three-core", "FloatingSandbox"].includes(chunk.name)) return [];
+            return [
+              { tag: "link", attrs: { rel: "modulepreload", crossorigin: "", fetchpriority: "high", href: `./${chunk.fileName}` }, injectTo: "head" as const },
+              // Vite waits for an async chunk's CSS before evaluating it. Start
+              // the hero's styles with the document so they do not add a hop.
+              ...Array.from(chunk.viteMetadata?.importedCss ?? [], file => ({
+                tag: "link", attrs: { rel: "stylesheet", crossorigin: "", href: `./${file}` }, injectTo: "head" as const,
+              })),
+            ];
+          });
       },
     },
   }],
