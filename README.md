@@ -27,5 +27,3 @@
 - **Visual and motion memory:** connect what a robot sees with where and when it moves.
 - **Multi-perspective retrieval:** search under semantic, spatial, and temporal constraints, then inspect and cross-check the evidence.
 - **Evolving evidence graphs:** support deep, branching searches that reuse observations and ground answers in retrieved evidence.
-
-The [interactive website](https://atomrecur.github.io/VimRobo/) brings together a full-sequence CODa environment, a LiDAR memory layer, and an illustrative reasoning graph. Four recorded cases show a search chain, branching retrieval, temporal verification, and deeper boundary searches, with distinct evidence images and original citation links.
