@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { ArrowUpRight, X } from "lucide-react";
 import { research } from "./data/research";
 import HeroSandbox from "./components/HeroSandbox";
@@ -8,6 +8,9 @@ const ResearchCases = lazy(() => import("./components/ResearchShowcase"));
 
 function DeferredCases() {
   const { ref, everVisible } = useVisibility<HTMLDivElement>("-64px 0px");
+  useEffect(() => {
+    if (window.location.hash === "#cases") ref.current?.scrollIntoView({ behavior: "instant" });
+  }, [ref]);
   return <div id="cases" ref={ref}>
     <Suspense fallback={<div className="cases-placeholder" aria-label="Loading recorded searches"/>}>
       {everVisible ? <ResearchCases/> : <div className="cases-placeholder"/>}
