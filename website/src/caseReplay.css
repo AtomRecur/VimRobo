@@ -86,8 +86,8 @@
 .replay-controls .replay-play { min-width:91px; padding:0 13px; background:#a8dfcd; color:#163831; border-radius:7px; font-weight:600; }
 .replay-controls .replay-play:hover { background:#c1eddd; }
 .replay-controls input { appearance:none; -webkit-appearance:none; height:3px; min-width:0; flex:1; margin:0; border:0; cursor:pointer; border-radius:2px; }
-.replay-controls input::-webkit-slider-thumb { appearance:none; width:10px; height:10px; border-radius:50%; background:#bcebd9; border:2px solid #183b34; box-shadow:0 0 0 3px #a3e5cf12; }
-.replay-controls input::-moz-range-thumb { width:9px; height:9px; border-radius:50%; background:#bcebd9; border:2px solid #183b34; }
+.replay-controls input::-webkit-slider-thumb { appearance:none; width:10px; height:10px; opacity:0; }
+.replay-controls input::-moz-range-thumb { width:9px; height:9px; opacity:0; }
 .replay-percentage { font:10px var(--mono); color:#7d9ca7; width:29px; text-align:right; }
 .replay-controls .replay-next { color:#bed6df; }
 .replay-controls .replay-restart { width:32px; border-left:1px solid #91adb32b; padding-left:12px; }
