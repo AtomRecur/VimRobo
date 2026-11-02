@@ -6,3 +6,5 @@ dist/
 private/
 qa/
 .env*
+__pycache__/
+*.py[cod]

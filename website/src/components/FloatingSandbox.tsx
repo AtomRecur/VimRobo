@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
-import { Line, OrbitControls, useTexture } from "@react-three/drei";
-import { RotateCcw, X, FileText, Github, Smile } from "lucide-react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Line, OrbitControls } from "@react-three/drei";
+import { RotateCcw } from "lucide-react";
 import * as THREE from "three";
 import type { ComponentRef, ReactNode, RefObject } from "react";
 import type { Observation, Scenario, Vec3 } from "../data/scenarios";
@@ -9,18 +9,14 @@ import type { ReasoningState } from "../engine/reasoning";
 import { reasoningLayout } from "../data/layerScene";
 import type { LayerScene } from "../data/layerScene";
 import { useReducedMotion } from "../hooks";
-import { research } from "../data/research";
+import { deviceProfile, loadScenePreview, loadEnvironmentDetail, loadScanDetail, loadMapDetail } from "../engine/sceneAssets";
+import type { SceneAssets } from "../engine/sceneAssets";
+import type { PointCloud } from "../engine/pointCloud";
 import FrameworkDock from "./FrameworkDock";
 
-const ASSET = "capture/";
 const PALETTE = { environment: "#abc6d8", scan: "#7ddbd5", reasoning: "#dfc596" };
 // Spread the six fixed anchors across the map, including on narrow screens.
 const EVIDENCE_FRAMES = [0, 1566, 4700, 7833, 9400, 12534];
-const RESOURCE_LINKS = [
-  { label: "Paper / arXiv", url: research.links.paper, Icon: FileText },
-  { label: "Hugging Face", url: research.links.huggingface, Icon: Smile },
-  { label: "GitHub", url: research.links.code, Icon: Github },
-];
 type Layers = [boolean, boolean, boolean];
 
 function Elevation({ spread, from, to, children }: { spread: RefObject<number>; from: number; to: number; children: ReactNode }) {
@@ -46,9 +42,15 @@ function Plate({ width, depth, color, grid = false }: { width: number; depth: nu
   </group>;
 }
 
-function EnvironmentLayer({ scene, asset }: { scene: LayerScene; asset: string }) {
-  const map = useTexture(asset + scene.baseMap);
-  useEffect(() => { map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8; map.needsUpdate = true; }, [map]);
+function EnvironmentLayer({ scene, assets }: { scene: LayerScene; assets: SceneAssets }) {
+  const map = useMemo(() => {
+    const texture = new THREE.Texture(assets.map);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+    texture.needsUpdate = true;
+    return texture;
+  }, [assets.map]);
+  useEffect(() => () => map.dispose(), [map]);
   return <group>
     <mesh position={[0,-0.085,0]}>
       <boxGeometry args={[scene.width+.06,.16,scene.depth+.06]} />
@@ -59,19 +61,17 @@ function EnvironmentLayer({ scene, asset }: { scene: LayerScene; asset: string }
       <meshBasicMaterial map={map} side={THREE.DoubleSide} transparent />
     </mesh>
     <Plate width={scene.width} depth={scene.depth} color={PALETTE.environment} />
-    {scene.environment && <RecordedSurfaces scene={scene} asset={asset}/>}
+    {assets.environment && <RecordedSurfaces cloud={assets.environment} pointSize={assets.pointSize}/>}
   </group>;
 }
 
-function RecordedSurfaces({scene,asset}:{scene:LayerScene;asset:string}) {
-  const env=scene.environment!;
-  const buffers=useLoader(THREE.FileLoader,[asset+env.positionsFile,asset+env.colorsFile],loader=>loader.setResponseType("arraybuffer")) as ArrayBuffer[];
+function RecordedSurfaces({cloud,pointSize}:{cloud:PointCloud;pointSize:number}) {
   const geometry=useMemo(()=>{
     const g=new THREE.BufferGeometry();
-    g.setAttribute("position",new THREE.BufferAttribute(new Float32Array(buffers[0]),3));
-    g.setAttribute("color",new THREE.BufferAttribute(new Uint8Array(buffers[1]),3,true));
+    g.setAttribute("position",new THREE.BufferAttribute(cloud.positions,3));
+    g.setAttribute("color",new THREE.BufferAttribute(cloud.colors!,3,true));
     g.computeBoundingSphere();return g;
-  },[buffers]);
+  },[cloud]);
   const material=useMemo(()=>new THREE.ShaderMaterial({
     vertexColors:true,
     vertexShader:`uniform float uSize; uniform float uHeight; varying vec3 vColor;
@@ -79,9 +79,9 @@ function RecordedSurfaces({scene,asset}:{scene:LayerScene;asset:string}) {
     fragmentShader:`varying vec3 vColor; void main(){float r=length(gl_PointCoord-.5);if(r>.49)discard;gl_FragColor=vec4(vColor,1.);
       #include <colorspace_fragment>
     }`,
-    uniforms:{uSize:{value:env.pointSize||.022},uHeight:{value:1000}},
+    uniforms:{uSize:{value:pointSize},uHeight:{value:1000}},
     depthWrite:true,transparent:false,toneMapped:false,
-  }),[env.pointSize]);
+  }),[pointSize]);
   useFrame(({size,gl})=>{material.uniforms.uHeight.value=size.height*gl.getPixelRatio();});
   useEffect(()=>()=>{geometry.dispose();material.dispose();},[geometry,material]);
   return <points geometry={geometry} material={material}/>;
@@ -115,18 +115,13 @@ const pointFragment = `
     gl_FragColor = vec4(c, (.36 + vHeight * .24 + vSweep * .12) * smoothstep(.5,.18,radius));
   }
 `;
-function BinaryScanLayer({scene,reduced,asset}:{scene:LayerScene;reduced:boolean;asset:string}) {
-  const buffer=useLoader(THREE.FileLoader,asset+scene.positionsFile!,loader=>loader.setResponseType("arraybuffer")) as ArrayBuffer;
-  const expanded=useMemo(()=>({...scene,positions:new Float32Array(buffer)}),[scene,buffer]);
-  return <ScanLayer scene={expanded} reduced={reduced}/>;
-}
-function ScanLayer({ scene, reduced }: { scene: LayerScene; reduced: boolean }) {
+function ScanLayer({ scene, cloud, reduced }: { scene: LayerScene; cloud: PointCloud; reduced: boolean }) {
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(scene.positions, 3));
+    g.setAttribute("position", new THREE.BufferAttribute(cloud.positions, 3));
     g.computeBoundingSphere();
     return g;
-  }, [scene]);
+  }, [cloud]);
   const material = useMemo(() => new THREE.ShaderMaterial({
     vertexShader: pointVertex, fragmentShader: pointFragment,
     uniforms: { uTime: {value:0}, uDepth:{value:scene.depth}, uMotion:{value:reduced ? 0 : 1} },
@@ -225,9 +220,8 @@ function CameraRig({ resetKey, reduced, overview, onDrag }: {resetKey:number; re
   return <OrbitControls ref={controls} target={[0,2.5,0]} enableZoom={false} enablePan={false} enableDamping={!reduced} dampingFactor={.07} rotateSpeed={.65} minPolarAngle={.3} maxPolarAngle={1.3} onStart={()=>onDrag(true)} onEnd={()=>onDrag(false)} />;
 }
 
-function SceneContent({ scenario, state, expanded, layers, overlays, reduced, onLoaded, asset, overview, dockRef }: {asset:string; overview:boolean;scenario:Scenario; state:ReasoningState; expanded:boolean; layers:Layers; overlays:Map<string,HTMLButtonElement>; reduced:boolean; onLoaded:(scene:LayerScene)=>void; dockRef:RefObject<HTMLDivElement|null>}) {
-  const raw = useLoader(THREE.FileLoader, asset+"scene.json",loader=>loader.setResponseType("text")) as string;
-  const scene:LayerScene = useMemo(()=>JSON.parse(raw),[raw]);
+function SceneContent({ scenario, state, expanded, layers, overlays, reduced, assets, overview, dockRef }: {assets:SceneAssets; overview:boolean;scenario:Scenario; state:ReasoningState; expanded:boolean; layers:Layers; overlays:Map<string,HTMLButtonElement>; reduced:boolean; dockRef:RefObject<HTMLDivElement|null>}) {
+  const scene = assets.scene;
   const layout=useMemo(()=>{
     if(!overview)return reasoningLayout;
     return Object.fromEntries(scenario.nodes.map((node,index)=>{
@@ -248,37 +242,76 @@ function SceneContent({ scenario, state, expanded, layers, overlays, reduced, on
       published.current=value;
     }
   },-2);
-  useEffect(()=>onLoaded(scene),[scene,onLoaded]);
   return <group>
     {(layers[1]||layers[2])&&<LayerGuides scene={scene} spread={spread}/>}
-    {layers[0] && <EnvironmentLayer scene={scene} asset={asset}/>}
-    <Elevation spread={spread} from={.06} to={2.55}>{layers[1]&&(scene.positionsFile?<BinaryScanLayer scene={scene} asset={asset} reduced={reduced}/>:<ScanLayer scene={scene} reduced={reduced}/>)}</Elevation>
+    {layers[0] && <EnvironmentLayer scene={scene} assets={assets}/>}
+    <Elevation spread={spread} from={.06} to={2.55}>{layers[1]&&<ScanLayer scene={scene} cloud={assets.scan} reduced={reduced}/>}</Elevation>
     <Elevation spread={spread} from={1.85} to={5.25}>{layers[2]&&<ReasoningLayer layout={layout} scenario={scenario} state={state} scene={scene} overlays={overlays} reduced={reduced}/>}</Elevation>
   </group>;
 }
 
-export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,onSelect,overview=false}: {overview?:boolean; scenario:Scenario; state:ReasoningState; hero?:boolean; visible?:boolean; resetKey?:number; onSelect?:(o:Observation)=>void}) {
+function FirstFrame({ onReady }: { onReady?: () => void }) {
+  const frame = useRef(0);
+  const invalidate = useThree(state => state.invalidate);
+  useFrame(() => {
+    frame.current++;
+    if (frame.current === 1) invalidate();
+    if (frame.current === 2) onReady?.();
+  });
+  return null;
+}
+
+export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,onSelect,overview=false,onReady}: {onReady?:()=>void;overview?:boolean; scenario:Scenario; state:ReasoningState; hero?:boolean; visible?:boolean; resetKey?:number; onSelect?:(o:Observation)=>void}) {
   const reduced=useReducedMotion();
   const [expanded,setExpanded]=useState(true);
   const [layers,setLayers]=useState<Layers>([true,true,true]);
   const [cameraReset,setCameraReset]=useState(0);
-  const [scene,setScene]=useState<LayerScene|null>(null);
+  const [assets,setAssets]=useState<SceneAssets|null>(null);
+  const [failure,setFailure]=useState<unknown>(null);
+  const [profile]=useState(deviceProfile);
+  const scene=assets?.scene??null;
   const [lost,setLost]=useState(false);
   const [dragging,setDragging]=useState(false);
-  const [inspecting,setInspecting]=useState(false);
+  const [detailRequested,setDetailRequested]=useState(false);
   const [frameworkHovered,setFrameworkHovered]=useState(false);
   const [frameworkFocused,setFrameworkFocused]=useState(false);
   const [pageVisible,setPageVisible]=useState(()=>!document.hidden);
-  const [captureIndex,setCaptureIndex]=useState<number|null>(null);
-  const asset=overview ? "capture-dense/" : ASSET;
-  const sampleIndices=useMemo(()=>{
-    if(!scene)return [];
-    // Fixed recorded views keep each evidence anchor consistent across visits.
-    return EVIDENCE_FRAMES.map((frame,i)=>Math.max(0,overview?scene.frames.findIndex(f=>f.frameIndex===frame):Math.floor(i*scene.frames.length/6)));
-  },[scene,overview]);
-  const sourceDialog=useRef<HTMLDialogElement>(null);
   const dockRef=useRef<HTMLDivElement>(null);
   const overlays=useRef(new Map<string,HTMLButtonElement>()).current;
+  useEffect(()=>{
+    let active=true;
+    loadScenePreview(overview).then(value=>{if(active)setAssets(value);}).catch(error=>{if(active)setFailure(error);});
+    return()=>{active=false;};
+  },[overview]);
+  useEffect(()=>{
+    if(!scene||!overview||!visible||!pageVisible||profile.saveData)return;
+    let active=true;
+    const apply=(patch:Partial<SceneAssets>)=>{if(active)setAssets(current=>{
+      if(!current)return current;
+      if(patch.environment&&(current.environment?.pointCount??0)>patch.environment.pointCount)return current;
+      if(patch.scan&&current.scan.pointCount>patch.scan.pointCount)return current;
+      if(patch.map&&current.map.width>patch.map.width)return current;
+      return {...current,...patch};
+    });};
+    const keepPreview=(error:unknown)=>console.warn("VimRobo: keeping the loaded scene while detail is unavailable",error);
+    const timer=window.setTimeout(()=>{
+      loadEnvironmentDetail(true).then(environment=>apply({environment,pointSize:.016})).catch(keepPreview);
+      loadScanDetail(false).then(scan=>apply({scan})).catch(keepPreview);
+      loadMapDetail(true).then(map=>apply({map})).catch(keepPreview);
+    },2500);
+    return()=>{active=false;window.clearTimeout(timer);};
+  },[scene,overview,visible,pageVisible,profile]);
+  useEffect(()=>{
+    // Full desktop geometry is requested only after someone explores the map.
+    if(!scene||!overview||!detailRequested||dragging||!visible||!pageVisible||profile.saveData||profile.compact)return;
+    let active=true;
+    const timer=window.setTimeout(()=>{
+      loadEnvironmentDetail(false).then(environment=>{if(active)setAssets(current=>current?{...current,environment,pointSize:.009}:current);}).catch(()=>{});
+      loadScanDetail().then(scan=>{if(active)setAssets(current=>current?{...current,scan}:current);}).catch(()=>{});
+      loadMapDetail(false).then(map=>{if(active)setAssets(current=>current?{...current,map}:current);}).catch(()=>{});
+    },2500);
+    return()=>{active=false;window.clearTimeout(timer);};
+  },[scene,overview,detailRequested,dragging,visible,pageVisible,profile]);
   useEffect(()=>{
     const update=()=>setPageVisible(!document.hidden);
     document.addEventListener("visibilitychange",update);
@@ -286,51 +319,35 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
   },[]);
   useEffect(()=>{
     if(reduced){setExpanded(true);return;}
-    if(!visible||!pageVisible||dragging||inspecting||frameworkHovered||frameworkFocused||!scene)return;
+    if(!visible||!pageVisible||dragging||frameworkHovered||frameworkFocused||!scene)return;
     const timer=window.setTimeout(()=>setExpanded(value=>!value),expanded?4000:3000);
     return()=>window.clearTimeout(timer);
-  },[expanded,visible,pageVisible,reduced,dragging,inspecting,frameworkHovered,frameworkFocused,scene]);
-  const showCapture=(index:number|null)=>{
-    setCaptureIndex(index);
-    setInspecting(true);
-    sourceDialog.current?.showModal();
-  };
-  return <div className={`layered-world ${overview?"overview-world":""}`} data-layout={expanded?"exploded":"aligned"} data-layers={layers.map(Number).join("")}>
-    <nav className="layer-toolbar" aria-label="Research resources">
-      <div className="research-links">{RESOURCE_LINKS.map(({label,url,Icon})=>url?
-        <a key={label} href={url} target="_blank" rel="noreferrer"><Icon size={16}/>{label}</a>:
-        <span className="pending-resource" key={label}><button disabled aria-label={`${label} — coming soon`} title="Coming soon"><Icon size={16}/>{label}</button><span className="resource-tooltip" aria-hidden="true">Coming soon</span></span>
-      )}</div>
-    </nav>
-    {lost ? <div className="scene-fallback"><span>3D view unavailable</span><p>The QA, evidence, and timeline are still available.</p></div> : <Canvas
+  },[expanded,visible,pageVisible,reduced,dragging,frameworkHovered,frameworkFocused,scene]);
+  if(failure)throw failure;
+  if(lost)throw new Error("WebGL context lost");
+  return <div className={`layered-world ${overview?"overview-world":""}`} data-environment-points={assets?.environment?.pointCount??0} data-scan-points={assets?.scan.pointCount??0} data-layout={expanded?"exploded":"aligned"} data-layers={layers.map(Number).join("")}>
+    <Canvas
       aria-label="Three-layer environment, spatial scan, and reasoning sandbox"
       orthographic camera={{position:[11,10.5,15],zoom:36,near:.1,far:100}}
-      dpr={[1,1.5]} gl={{antialias:true,alpha:true,powerPreference:"high-performance"}}
+      dpr={profile.compact?1:[1,1.5]} gl={{antialias:!profile.compact,alpha:true,powerPreference:"default"}}
       frameloop={visible&&pageVisible&&!reduced?"always":"demand"}
       onCreated={({gl})=>{gl.setClearColor("#0c181a",0);gl.domElement.addEventListener("webglcontextlost",e=>{e.preventDefault();setLost(true);},{once:true});}}
     >
       <ambientLight intensity={1.5}/><directionalLight position={[3,10,7]} intensity={2}/>
-      <SceneContent scenario={scenario} state={state} expanded={expanded} layers={layers} overlays={overlays} reduced={reduced} onLoaded={setScene} asset={asset} overview={overview} dockRef={dockRef}/>
-      <CameraRig resetKey={resetKey+cameraReset} reduced={reduced} overview={overview} onDrag={setDragging}/>
-    </Canvas>}
+      {assets && <><SceneContent scenario={scenario} state={state} expanded={expanded} layers={layers} overlays={overlays} reduced={reduced} assets={assets} overview={overview} dockRef={dockRef}/><FirstFrame onReady={onReady}/></>}
+      <CameraRig resetKey={resetKey+cameraReset} reduced={reduced} overview={overview} onDrag={value=>{setDragging(value);if(value)setDetailRequested(true);}}/>
+    </Canvas>
     <FrameworkDock dockRef={dockRef} layers={layers} animate={visible&&pageVisible&&!reduced} onHover={setFrameworkHovered} onFocus={setFrameworkFocused}
       onToggle={index=>setLayers(values=>values.map((show,i)=>i===index?!show:show) as Layers)}/>
     <div className="reasoning-labels" aria-label="Spatial reasoning nodes">
       {layers[2] && state.visibleGraphNodes.map((node)=>{
         const observation=scenario.observations.find(o=>o.id===node.observationId);
         const revisit=state.revisitedNodeIds.includes(node.id);
-        return <button key={node.id} ref={el=>{if(el)overlays.set(node.id,el);else overlays.delete(node.id);}} style={{visibility:"hidden"}} className={`reasoning-marker ${revisit?"revisited":""} ${state.activeNodeIds.includes(node.id)?"active":""}`} aria-label={overview?`Inspect evidence E${scenario.nodes.indexOf(node)+1}`:`Reasoning node: ${node.label}`} title={overview?`Recorded frame ${EVIDENCE_FRAMES[scenario.nodes.indexOf(node)]}`:node.label} onClick={()=>{if(overview){showCapture(sampleIndices[scenario.nodes.indexOf(node)]);}else if(observation)onSelect?.(observation);}} disabled={overview?!scene:!observation}>
+        return <button key={node.id} ref={el=>{if(el)overlays.set(node.id,el);else overlays.delete(node.id);}} style={{visibility:"hidden"}} className={`reasoning-marker ${revisit?"revisited":""} ${state.activeNodeIds.includes(node.id)?"active":""}`} aria-label={overview?`Evidence E${scenario.nodes.indexOf(node)+1}`:`Reasoning node: ${node.label}`} title={overview?`Recorded frame ${EVIDENCE_FRAMES[scenario.nodes.indexOf(node)]}`:node.label} onClick={()=>{if(!overview&&observation)onSelect?.(observation);}} disabled={overview||!observation}>
           {overview?`E${scenario.nodes.indexOf(node)+1}`:node.id==="root"?"Q":node.id==="answer"?"A":String(scenario.nodes.indexOf(node)).padStart(2,"0")}<span>{revisit?"↺":node.id==="answer"?"✓":""}</span>
         </button>;
       })}
     </div>
     <button className="camera-reset" aria-label="Reset camera view" title="Reset camera" onClick={()=>setCameraReset(v=>v+1)}><RotateCcw size={15}/></button>
-    <dialog ref={sourceDialog} className="capture-dialog" aria-labelledby="capture-title" onClose={()=>setInspecting(false)} onClick={e=>{if(e.target===sourceDialog.current)sourceDialog.current.close();}}>
-      <button className="dialog-close icon-button" aria-label="Close source frames" onClick={()=>sourceDialog.current?.close()}><X size={19}/></button>
-      <div className="eyebrow">CODA / SEQUENCE {String(scene?.sequence??0).padStart(2,"0")}</div><h2 id="capture-title">{captureIndex===null?"The world behind the layers.":`Evidence / frame ${scene?.frames[captureIndex]?.frameIndex}`}</h2>
-      <p>{scene?.sampledFrameCount?.toLocaleString()} registered scans across the complete {((scene?.routeMeters??0)/1000).toFixed(2)} km journey. Every view below is a recorded camera frame.</p>
-      <div className={`capture-grid ${captureIndex!==null?"single-capture":""}`}>{scene?.frames.filter((_,i)=>captureIndex===null||captureIndex===i).map((f,i)=><figure key={f.image}><img src={asset+f.image} alt={`Recorded robot camera view ${i+1}`} loading="lazy"/><figcaption><span>FRAME {f.frameIndex}</span>{f.timestamp}</figcaption></figure>)}</div>
-      <p className="capture-provenance">{scene?.modality}. The top view is a reconstruction from recorded measurements; the upper links illustrate relationships between evidence, not a logged inference run.</p>
-    </dialog>
   </div>;
 }

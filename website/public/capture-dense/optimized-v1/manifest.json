@@ -1,0 +1,1018 @@
+{
+  "version": 1,
+  "sourceScene": "../scene.json",
+  "format": {
+    "magic": "VPC1",
+    "compression": "gzip",
+    "byteOrder": "little-endian",
+    "headerBytes": 36,
+    "countOffset": 4,
+    "flagsOffset": 8,
+    "minimumOffset": 12,
+    "stepOffset": 24,
+    "colorsFlag": 1,
+    "deltaPositionsFlag": 2,
+    "positions": "three planar uint16 axes; modulo-65536 deltas from zero",
+    "colors": "optional interleaved original uint8 RGB",
+    "order": "stable 16-bit XYZ Morton order",
+    "sampling": "evenly spaced Morton indices, including both endpoints"
+  },
+  "environment": {
+    "preview": {
+      "file": "environment-preview.vpc.gz",
+      "points": 40000,
+      "pointSize": 0.049,
+      "bytes": 314117,
+      "uncompressedBytes": 360036,
+      "sourceEquivalentBytes": 600000,
+      "bytesSaved": 285883,
+      "sha256": "03f31ab397e275a2da0eb41da1bc9f5365b82d8b5767dc9d9f27fb5158292c69",
+      "verification": {
+        "sourcePositionsFile": "../environment-positions.bin",
+        "sourceColorsFile": "../environment-colors.bin",
+        "sourcePointCount": 1200000,
+        "allPointsChecked": true,
+        "allSourcePointsRetained": false,
+        "colorsExact": true,
+        "minimum": [
+          -8.99919319152832,
+          0.03364154323935509,
+          -4.050745487213135
+        ],
+        "maximum": [
+          8.997612953186035,
+          0.8429876565933228,
+          4.057384014129639
+        ],
+        "step": [
+          0.00027461364516057074,
+          1.2349830285529606e-05,
+          0.00012372212950140238
+        ],
+        "maxAxisError": [
+          0.0001373291015625,
+          6.198883056640625e-06,
+          6.186962127685547e-05
+        ],
+        "maxCoordinateError": 0.0001373291015625,
+        "errorEpsilon": 1e-06,
+        "positionPlaneOffsets": [
+          36,
+          80036,
+          160036
+        ],
+        "colorsOffset": 240036,
+        "samples": [
+          {
+            "encodedIndex": 0,
+            "originalIndex": 1163314,
+            "sourcePosition": [
+              -7.259106636047363,
+              0.11644331365823746,
+              -1.0922572612762451
+            ],
+            "sourceColor": [
+              27,
+              25,
+              29
+            ]
+          },
+          {
+            "encodedIndex": 4999,
+            "originalIndex": 1181798,
+            "sourcePosition": [
+              7.2624640464782715,
+              0.3261043429374695,
+              -0.7992911338806152
+            ],
+            "sourceColor": [
+              50,
+              47,
+              39
+            ]
+          },
+          {
+            "encodedIndex": 9999,
+            "originalIndex": 82314,
+            "sourcePosition": [
+              -7.372958183288574,
+              0.14918576180934906,
+              0.7526530623435974
+            ],
+            "sourceColor": [
+              57,
+              48,
+              35
+            ]
+          },
+          {
+            "encodedIndex": 14999,
+            "originalIndex": 1164099,
+            "sourcePosition": [
+              -8.603666305541992,
+              0.11338698863983154,
+              2.489166736602783
+            ],
+            "sourceColor": [
+              32,
+              30,
+              29
+            ]
+          },
+          {
+            "encodedIndex": 19999,
+            "originalIndex": 172521,
+            "sourcePosition": [
+              -2.8147308826446533,
+              0.22502875328063965,
+              3.006659746170044
+            ],
+            "sourceColor": [
+              146,
+              145,
+              158
+            ]
+          },
+          {
+            "encodedIndex": 24999,
+            "originalIndex": 682185,
+            "sourcePosition": [
+              -3.622490406036377,
+              0.4144132733345032,
+              2.528564453125
+            ],
+            "sourceColor": [
+              30,
+              69,
+              125
+            ]
+          },
+          {
+            "encodedIndex": 29999,
+            "originalIndex": 147494,
+            "sourcePosition": [
+              1.8149700164794922,
+              0.3113476037979126,
+              2.0719616413116455
+            ],
+            "sourceColor": [
+              70,
+              69,
+              62
+            ]
+          },
+          {
+            "encodedIndex": 34999,
+            "originalIndex": 541507,
+            "sourcePosition": [
+              8.34322738647461,
+              0.5064855217933655,
+              0.8183993697166443
+            ],
+            "sourceColor": [
+              105,
+              113,
+              123
+            ]
+          },
+          {
+            "encodedIndex": 39999,
+            "originalIndex": 538068,
+            "sourcePosition": [
+              4.783915042877197,
+              0.6601639986038208,
+              3.473715305328369
+            ],
+            "sourceColor": [
+              128,
+              143,
+              129
+            ]
+          }
+        ]
+      }
+    },
+    "mobile": {
+      "file": "environment-mobile.vpc.gz",
+      "points": 400000,
+      "pointSize": 0.016,
+      "bytes": 2955361,
+      "uncompressedBytes": 3600036,
+      "sourceEquivalentBytes": 6000000,
+      "bytesSaved": 3044639,
+      "sha256": "d051ffaa21d7aaa727596bbb812956dcea22b510c171e5bc2f9875e69dc90e3e",
+      "verification": {
+        "sourcePositionsFile": "../environment-positions.bin",
+        "sourceColorsFile": "../environment-colors.bin",
+        "sourcePointCount": 1200000,
+        "allPointsChecked": true,
+        "allSourcePointsRetained": false,
+        "colorsExact": true,
+        "minimum": [
+          -8.99919319152832,
+          0.03364154323935509,
+          -4.050745487213135
+        ],
+        "maximum": [
+          8.997612953186035,
+          0.8429876565933228,
+          4.057384014129639
+        ],
+        "step": [
+          0.00027461364516057074,
+          1.2349830285529606e-05,
+          0.00012372212950140238
+        ],
+        "maxAxisError": [
+          0.0001373291015625,
+          6.198883056640625e-06,
+          6.186962127685547e-05
+        ],
+        "maxCoordinateError": 0.0001373291015625,
+        "errorEpsilon": 1e-06,
+        "positionPlaneOffsets": [
+          36,
+          800036,
+          1600036
+        ],
+        "colorsOffset": 2400036,
+        "samples": [
+          {
+            "encodedIndex": 0,
+            "originalIndex": 1163314,
+            "sourcePosition": [
+              -7.259106636047363,
+              0.11644331365823746,
+              -1.0922572612762451
+            ],
+            "sourceColor": [
+              27,
+              25,
+              29
+            ]
+          },
+          {
+            "encodedIndex": 49999,
+            "originalIndex": 858127,
+            "sourcePosition": [
+              7.3270463943481445,
+              0.3124787509441376,
+              -0.9672977924346924
+            ],
+            "sourceColor": [
+              39,
+              31,
+              36
+            ]
+          },
+          {
+            "encodedIndex": 99999,
+            "originalIndex": 982145,
+            "sourcePosition": [
+              -7.3383073806762695,
+              0.15935954451560974,
+              0.7280829548835754
+            ],
+            "sourceColor": [
+              54,
+              49,
+              41
+            ]
+          },
+          {
+            "encodedIndex": 149999,
+            "originalIndex": 414931,
+            "sourcePosition": [
+              -8.615116119384766,
+              0.12935873866081238,
+              2.4771265983581543
+            ],
+            "sourceColor": [
+              71,
+              53,
+              49
+            ]
+          },
+          {
+            "encodedIndex": 199999,
+            "originalIndex": 767135,
+            "sourcePosition": [
+              -2.7547576427459717,
+              0.22204147279262543,
+              2.792415142059326
+            ],
+            "sourceColor": [
+              174,
+              185,
+              182
+            ]
+          },
+          {
+            "encodedIndex": 249999,
+            "originalIndex": 59333,
+            "sourcePosition": [
+              -3.8668408393859863,
+              0.4319305419921875,
+              2.4803006649017334
+            ],
+            "sourceColor": [
+              243,
+              251,
+              200
+            ]
+          },
+          {
+            "encodedIndex": 299999,
+            "originalIndex": 111707,
+            "sourcePosition": [
+              1.8779265880584717,
+              0.3060249388217926,
+              2.079190254211426
+            ],
+            "sourceColor": [
+              57,
+              61,
+              67
+            ]
+          },
+          {
+            "encodedIndex": 349999,
+            "originalIndex": 417653,
+            "sourcePosition": [
+              8.315832138061523,
+              0.5090314745903015,
+              0.767199695110321
+            ],
+            "sourceColor": [
+              106,
+              119,
+              131
+            ]
+          },
+          {
+            "encodedIndex": 399999,
+            "originalIndex": 538068,
+            "sourcePosition": [
+              4.783915042877197,
+              0.6601639986038208,
+              3.473715305328369
+            ],
+            "sourceColor": [
+              128,
+              143,
+              129
+            ]
+          }
+        ]
+      }
+    },
+    "full": {
+      "file": "environment-full.vpc.gz",
+      "points": 1200000,
+      "pointSize": 0.009,
+      "bytes": 8524701,
+      "uncompressedBytes": 10800036,
+      "sourceEquivalentBytes": 18000000,
+      "bytesSaved": 9475299,
+      "sha256": "b1752012277c60a26059f9fca70447ac0c074ddcd48ed9f82f79254190407211",
+      "verification": {
+        "sourcePositionsFile": "../environment-positions.bin",
+        "sourceColorsFile": "../environment-colors.bin",
+        "sourcePointCount": 1200000,
+        "allPointsChecked": true,
+        "allSourcePointsRetained": true,
+        "colorsExact": true,
+        "minimum": [
+          -8.99919319152832,
+          0.03364154323935509,
+          -4.050745487213135
+        ],
+        "maximum": [
+          8.997612953186035,
+          0.8429876565933228,
+          4.057384014129639
+        ],
+        "step": [
+          0.00027461364516057074,
+          1.2349830285529606e-05,
+          0.00012372212950140238
+        ],
+        "maxAxisError": [
+          0.0001373291015625,
+          6.198883056640625e-06,
+          6.186962127685547e-05
+        ],
+        "maxCoordinateError": 0.0001373291015625,
+        "errorEpsilon": 1e-06,
+        "positionPlaneOffsets": [
+          36,
+          2400036,
+          4800036
+        ],
+        "colorsOffset": 7200036,
+        "samples": [
+          {
+            "encodedIndex": 0,
+            "originalIndex": 1163314,
+            "sourcePosition": [
+              -7.259106636047363,
+              0.11644331365823746,
+              -1.0922572612762451
+            ],
+            "sourceColor": [
+              27,
+              25,
+              29
+            ]
+          },
+          {
+            "encodedIndex": 149999,
+            "originalIndex": 365246,
+            "sourcePosition": [
+              7.315423488616943,
+              0.31373271346092224,
+              -0.9550184607505798
+            ],
+            "sourceColor": [
+              15,
+              58,
+              32
+            ]
+          },
+          {
+            "encodedIndex": 299999,
+            "originalIndex": 476658,
+            "sourcePosition": [
+              -7.354873180389404,
+              0.15626563131809235,
+              0.7330442070960999
+            ],
+            "sourceColor": [
+              200,
+              252,
+              251
+            ]
+          },
+          {
+            "encodedIndex": 449999,
+            "originalIndex": 683441,
+            "sourcePosition": [
+              -8.579565048217773,
+              0.12995611131191254,
+              2.5181174278259277
+            ],
+            "sourceColor": [
+              18,
+              17,
+              13
+            ]
+          },
+          {
+            "encodedIndex": 599999,
+            "originalIndex": 209019,
+            "sourcePosition": [
+              -2.7098171710968018,
+              0.22277966141700745,
+              2.7922842502593994
+            ],
+            "sourceColor": [
+              117,
+              137,
+              135
+            ]
+          },
+          {
+            "encodedIndex": 749999,
+            "originalIndex": 879435,
+            "sourcePosition": [
+              -3.8648934364318848,
+              0.4307396113872528,
+              2.48201847076416
+            ],
+            "sourceColor": [
+              157,
+              173,
+              251
+            ]
+          },
+          {
+            "encodedIndex": 899999,
+            "originalIndex": 1054438,
+            "sourcePosition": [
+              1.8383692502975464,
+              0.30833929777145386,
+              2.0878734588623047
+            ],
+            "sourceColor": [
+              250,
+              254,
+              253
+            ]
+          },
+          {
+            "encodedIndex": 1049999,
+            "originalIndex": 479298,
+            "sourcePosition": [
+              8.330284118652344,
+              0.5105080008506775,
+              0.7753138542175293
+            ],
+            "sourceColor": [
+              104,
+              70,
+              77
+            ]
+          },
+          {
+            "encodedIndex": 1199999,
+            "originalIndex": 538068,
+            "sourcePosition": [
+              4.783915042877197,
+              0.6601639986038208,
+              3.473715305328369
+            ],
+            "sourceColor": [
+              128,
+              143,
+              129
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "scan": {
+    "preview": {
+      "file": "scan-preview.vpc.gz",
+      "points": 16000,
+      "pointSize": 0.04,
+      "bytes": 82884,
+      "uncompressedBytes": 96036,
+      "sourceEquivalentBytes": 192000,
+      "bytesSaved": 109116,
+      "sha256": "7768071443069ee76d97d41ef552b7388ed0394be010b3226abb18b6fe8e86c7",
+      "verification": {
+        "sourcePositionsFile": "../scan-positions.bin",
+        "sourceColorsFile": null,
+        "sourcePointCount": 320000,
+        "allPointsChecked": true,
+        "allSourcePointsRetained": false,
+        "colorsExact": null,
+        "minimum": [
+          -8.99751091003418,
+          0.032817136496305466,
+          -4.04189395904541
+        ],
+        "maximum": [
+          8.999130249023438,
+          0.952383816242218,
+          4.058664798736572
+        ],
+        "step": [
+          0.00027461114223115146,
+          1.4031687896931544e-05,
+          0.00012360660184640437
+        ],
+        "maxAxisError": [
+          0.0001373291015625,
+          7.033348083496094e-06,
+          6.181001663208008e-05
+        ],
+        "maxCoordinateError": 0.0001373291015625,
+        "errorEpsilon": 1e-06,
+        "positionPlaneOffsets": [
+          36,
+          32036,
+          64036
+        ],
+        "colorsOffset": null,
+        "samples": [
+          {
+            "encodedIndex": 0,
+            "originalIndex": 13555,
+            "sourcePosition": [
+              -5.157938003540039,
+              0.3487527072429657,
+              -2.1460306644439697
+            ]
+          },
+          {
+            "encodedIndex": 1999,
+            "originalIndex": 130324,
+            "sourcePosition": [
+              4.173884868621826,
+              0.3671225607395172,
+              -1.5816222429275513
+            ]
+          },
+          {
+            "encodedIndex": 3999,
+            "originalIndex": 6018,
+            "sourcePosition": [
+              -6.700015544891357,
+              0.04301118478178978,
+              0.45968684554100037
+            ]
+          },
+          {
+            "encodedIndex": 5999,
+            "originalIndex": 153392,
+            "sourcePosition": [
+              -5.320312023162842,
+              0.4106180667877197,
+              0.6796566843986511
+            ]
+          },
+          {
+            "encodedIndex": 7999,
+            "originalIndex": 295433,
+            "sourcePosition": [
+              -5.911350727081299,
+              0.1662255972623825,
+              3.0751848220825195
+            ]
+          },
+          {
+            "encodedIndex": 9999,
+            "originalIndex": 49962,
+            "sourcePosition": [
+              -0.44837790727615356,
+              0.46663275361061096,
+              3.5234169960021973
+            ]
+          },
+          {
+            "encodedIndex": 11999,
+            "originalIndex": 180812,
+            "sourcePosition": [
+              6.648793697357178,
+              0.4489755630493164,
+              1.817484736442566
+            ]
+          },
+          {
+            "encodedIndex": 13999,
+            "originalIndex": 65494,
+            "sourcePosition": [
+              4.353875637054443,
+              0.49407798051834106,
+              0.3663441240787506
+            ]
+          },
+          {
+            "encodedIndex": 15999,
+            "originalIndex": 259753,
+            "sourcePosition": [
+              5.080555438995361,
+              0.7240644097328186,
+              3.9276797771453857
+            ]
+          }
+        ]
+      }
+    },
+    "full": {
+      "file": "scan-full.vpc.gz",
+      "points": 320000,
+      "pointSize": 0.009,
+      "bytes": 1495021,
+      "uncompressedBytes": 1920036,
+      "sourceEquivalentBytes": 3840000,
+      "bytesSaved": 2344979,
+      "sha256": "d811a86336b9e44e1369094f9423a671e655c4d169ea3d3ab7617780591365fe",
+      "verification": {
+        "sourcePositionsFile": "../scan-positions.bin",
+        "sourceColorsFile": null,
+        "sourcePointCount": 320000,
+        "allPointsChecked": true,
+        "allSourcePointsRetained": true,
+        "colorsExact": null,
+        "minimum": [
+          -8.99751091003418,
+          0.032817136496305466,
+          -4.04189395904541
+        ],
+        "maximum": [
+          8.999130249023438,
+          0.952383816242218,
+          4.058664798736572
+        ],
+        "step": [
+          0.00027461114223115146,
+          1.4031687896931544e-05,
+          0.00012360660184640437
+        ],
+        "maxAxisError": [
+          0.0001373291015625,
+          7.033348083496094e-06,
+          6.181001663208008e-05
+        ],
+        "maxCoordinateError": 0.0001373291015625,
+        "errorEpsilon": 1e-06,
+        "positionPlaneOffsets": [
+          36,
+          640036,
+          1280036
+        ],
+        "colorsOffset": null,
+        "samples": [
+          {
+            "encodedIndex": 0,
+            "originalIndex": 13555,
+            "sourcePosition": [
+              -5.157938003540039,
+              0.3487527072429657,
+              -2.1460306644439697
+            ]
+          },
+          {
+            "encodedIndex": 39999,
+            "originalIndex": 253843,
+            "sourcePosition": [
+              4.24077033996582,
+              0.36377814412117004,
+              -1.6300883293151855
+            ]
+          },
+          {
+            "encodedIndex": 79999,
+            "originalIndex": 86290,
+            "sourcePosition": [
+              -6.62952995300293,
+              0.043758828192949295,
+              0.4904162585735321
+            ]
+          },
+          {
+            "encodedIndex": 119999,
+            "originalIndex": 183803,
+            "sourcePosition": [
+              -5.5415778160095215,
+              0.42519623041152954,
+              0.6717077493667603
+            ]
+          },
+          {
+            "encodedIndex": 159999,
+            "originalIndex": 168922,
+            "sourcePosition": [
+              -5.879493713378906,
+              0.16666486859321594,
+              3.213228940963745
+            ]
+          },
+          {
+            "encodedIndex": 199999,
+            "originalIndex": 127074,
+            "sourcePosition": [
+              -0.21334318816661835,
+              0.4664987623691559,
+              3.4489190578460693
+            ]
+          },
+          {
+            "encodedIndex": 239999,
+            "originalIndex": 204966,
+            "sourcePosition": [
+              6.632605075836182,
+              0.4393678307533264,
+              1.8794541358947754
+            ]
+          },
+          {
+            "encodedIndex": 279999,
+            "originalIndex": 285857,
+            "sourcePosition": [
+              4.336365222930908,
+              0.4986827075481415,
+              0.3686356246471405
+            ]
+          },
+          {
+            "encodedIndex": 319999,
+            "originalIndex": 259753,
+            "sourcePosition": [
+              5.080555438995361,
+              0.7240644097328186,
+              3.9276797771453857
+            ]
+          }
+        ]
+      }
+    },
+    "mid": {
+      "file": "scan-mid.vpc.gz",
+      "points": 80000,
+      "pointSize": 0.02,
+      "bytes": 393234,
+      "uncompressedBytes": 480036,
+      "sourceEquivalentBytes": 960000,
+      "bytesSaved": 566766,
+      "sha256": "a46f726443920b8ba4476c698f45705e2801fdeff7f694b31c4ef39f2343d9ed",
+      "verification": {
+        "sourcePositionsFile": "../scan-positions.bin",
+        "sourceColorsFile": null,
+        "sourcePointCount": 320000,
+        "allPointsChecked": true,
+        "allSourcePointsRetained": false,
+        "colorsExact": null,
+        "minimum": [
+          -8.99751091003418,
+          0.032817136496305466,
+          -4.04189395904541
+        ],
+        "maximum": [
+          8.999130249023438,
+          0.952383816242218,
+          4.058664798736572
+        ],
+        "step": [
+          0.00027461114223115146,
+          1.4031687896931544e-05,
+          0.00012360660184640437
+        ],
+        "maxAxisError": [
+          0.0001373291015625,
+          7.033348083496094e-06,
+          6.181001663208008e-05
+        ],
+        "maxCoordinateError": 0.0001373291015625,
+        "errorEpsilon": 1e-06,
+        "positionPlaneOffsets": [
+          36,
+          160036,
+          320036
+        ],
+        "colorsOffset": null,
+        "samples": [
+          {
+            "encodedIndex": 0,
+            "originalIndex": 13555,
+            "sourcePosition": [
+              -5.157938003540039,
+              0.3487527072429657,
+              -2.1460306644439697
+            ]
+          },
+          {
+            "encodedIndex": 9999,
+            "originalIndex": 133056,
+            "sourcePosition": [
+              4.142877578735352,
+              0.3722042143344879,
+              -1.5706843137741089
+            ]
+          },
+          {
+            "encodedIndex": 19999,
+            "originalIndex": 97599,
+            "sourcePosition": [
+              -6.696650981903076,
+              0.044254425913095474,
+              0.49925217032432556
+            ]
+          },
+          {
+            "encodedIndex": 29999,
+            "originalIndex": 293229,
+            "sourcePosition": [
+              -5.083497047424316,
+              0.4149439036846161,
+              0.6504393815994263
+            ]
+          },
+          {
+            "encodedIndex": 39999,
+            "originalIndex": 237168,
+            "sourcePosition": [
+              -5.855885028839111,
+              0.16320247948169708,
+              3.203195095062256
+            ]
+          },
+          {
+            "encodedIndex": 49999,
+            "originalIndex": 53996,
+            "sourcePosition": [
+              -0.28040558099746704,
+              0.4763873517513275,
+              3.5417726039886475
+            ]
+          },
+          {
+            "encodedIndex": 59999,
+            "originalIndex": 52856,
+            "sourcePosition": [
+              6.665229797363281,
+              0.43709897994995117,
+              1.8787777423858643
+            ]
+          },
+          {
+            "encodedIndex": 69999,
+            "originalIndex": 162038,
+            "sourcePosition": [
+              4.265079975128174,
+              0.49729496240615845,
+              0.3610292077064514
+            ]
+          },
+          {
+            "encodedIndex": 79999,
+            "originalIndex": 259753,
+            "sourcePosition": [
+              5.080555438995361,
+              0.7240644097328186,
+              3.9276797771453857
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "map": {
+    "preview": "map-preview.webp",
+    "mid": "map-mid.webp",
+    "full": "map-full.webp",
+    "sourceFile": "../base-map.webp",
+    "levels": {
+      "preview": {
+        "width": 1024,
+        "height": 462,
+        "bytes": 146020,
+        "sha256": "a0382184909208c15af0f1fe79653295a79aa8653c6876e224e789af43362ac4",
+        "alphaExactAfterResize": true,
+        "resize": "Lanczos",
+        "webpQuality": 72
+      },
+      "mid": {
+        "width": 2048,
+        "height": 924,
+        "bytes": 583152,
+        "sha256": "736635e534f97b1dc2697c24d2bfbb76c819848022f38283375b9a107126f87c",
+        "alphaExactAfterResize": true,
+        "resize": "Lanczos",
+        "webpQuality": 90
+      },
+      "full": {
+        "width": 4096,
+        "height": 1847,
+        "bytes": 1795900,
+        "sha256": "d460a2d8febaeb742e865ff415c5d3f0e481c71dadc2ae1a4f8cbe18bab90c83",
+        "alphaExactAfterResize": true,
+        "resize": "Lanczos",
+        "webpQuality": 90
+      }
+    }
+  },
+  "poster": "poster.webp",
+  "posterMetadata": {
+    "sourceFile": "../environment-preview.webp",
+    "width": 1440,
+    "height": 810,
+    "bytes": 70034,
+    "sha256": "27fa33b63ccf82e69c0781941fee973c2878cc2b1daf3e082d7b2dddf3162d12",
+    "resize": "Lanczos",
+    "webpQuality": 72
+  },
+  "verification": {
+    "sourceFiles": {
+      "environment-positions.bin": {
+        "file": "../environment-positions.bin",
+        "bytes": 14400000,
+        "sha256": "dbb6b22acba3b527edad25a14faa034888eb45bea24ef6dcdfbcd2cb1fe2fe4e"
+      },
+      "environment-colors.bin": {
+        "file": "../environment-colors.bin",
+        "bytes": 3600000,
+        "sha256": "314f813ea3f099e2969f2b33f8a3cef8ee5f73a9e67da40817c91bff7a5a39e6"
+      },
+      "scan-positions.bin": {
+        "file": "../scan-positions.bin",
+        "bytes": 3840000,
+        "sha256": "1eaffe610b0aceada897028c9416f9a6486a48d7d19ee5998367f474bba55d80"
+      },
+      "base-map.webp": {
+        "file": "../base-map.webp",
+        "bytes": 4118182,
+        "sha256": "8dc161e1bf4e830970d0898c500b40ab67b91fd40d4a90fd31f31c2db7302364"
+      },
+      "environment-preview.webp": {
+        "file": "../environment-preview.webp",
+        "bytes": 661210,
+        "sha256": "3a99e8cb6cb8b2c8e96b5482d89fc588c4b394ba4bdcff8dba9f449c6f2f8302"
+      }
+    },
+    "decodedPointsChecked": 2056000,
+    "fullEnvironmentRetainsEverySourcePoint": true,
+    "fullScanRetainsEverySourcePoint": true,
+    "allColorBytesExact": true,
+    "maxCoordinateError": 0.0001373291015625,
+    "maxAllowedCoordinateError": 0.0002,
+    "originalAssetBytes": 25958182,
+    "previewAssetBytes": 543021,
+    "fullDetailAssetBytes": 11815622,
+    "fullDetailBytesSaved": 14142560,
+    "fullDetailSavingsPercent": 54.48
+  }
+}

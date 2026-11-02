@@ -1,8 +1,18 @@
-import { useRef } from "react";
+import { lazy, Suspense, useRef } from "react";
 import { ArrowUpRight, FileText, X } from "lucide-react";
 import { research } from "./data/research";
 import HeroSandbox from "./components/HeroSandbox";
-import ResearchCases from "./components/ResearchShowcase";
+import { useVisibility } from "./hooks";
+const ResearchCases = lazy(() => import("./components/ResearchShowcase"));
+
+function DeferredCases() {
+  const { ref, everVisible } = useVisibility<HTMLDivElement>("-64px 0px");
+  return <div id="cases" ref={ref}>
+    <Suspense fallback={<div className="cases-placeholder" aria-label="Loading recorded searches"/>}>
+      {everVisible ? <ResearchCases/> : <div className="cases-placeholder"/>}
+    </Suspense>
+  </div>;
+}
 
 export default function App() {
   const paper = useRef<HTMLDialogElement>(null);
@@ -27,7 +37,7 @@ export default function App() {
       </header>
       <main>
         <HeroSandbox />
-        <ResearchCases />
+        <DeferredCases />
       </main>
       <footer>
         <span>Experience → search → verification → answer.</span>

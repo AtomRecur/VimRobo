@@ -1,0 +1,47 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
+import { decodePointCloud } from "../src/engine/pointCloud.ts";
+
+const directory = "public/capture-dense/optimized-v1/";
+const manifest = JSON.parse(readFileSync(directory + "manifest.json", "utf8"));
+
+test("the preview stays small while the full desktop cloud retains every recorded surface point", () => {
+  const previewBytes = manifest.environment.preview.bytes + manifest.scan.preview.bytes + readFileSync(directory + manifest.map.preview).length;
+  assert.ok(previewBytes < 550_000);
+  assert.ok(readFileSync(directory + manifest.poster).length < 80_000);
+  assert.equal(manifest.environment.full.points, 1_200_000);
+  assert.equal(manifest.scan.full.points, 320_000);
+});
+
+test("browser decoding preserves actual source colors and bounded spatial coordinates in every detail tier", () => {
+  for (const descriptor of [...Object.values(manifest.environment), ...Object.values(manifest.scan)] as any[]) {
+    const raw = gunzipSync(readFileSync(directory + descriptor.file));
+    const data = decodePointCloud(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
+    assert.equal(data.pointCount, descriptor.points);
+    assert.equal(data.positions.length, data.pointCount * 3);
+    const verification = descriptor.verification;
+    const sourcePositions = readFileSync(directory + verification.sourcePositionsFile);
+    const sourceColors = verification.sourceColorsFile ? readFileSync(directory + verification.sourceColorsFile) : null;
+    for (const sample of verification.samples) {
+      for (let axis = 0; axis < 3; axis++) {
+        const original = sourcePositions.readFloatLE((sample.originalIndex * 3 + axis) * 4);
+        const decoded = data.positions[sample.encodedIndex * 3 + axis];
+        assert.ok(Math.abs(decoded - original) <= verification.step[axis] / 2 + 0.000001);
+        if (sourceColors) assert.equal(data.colors![sample.encodedIndex * 3 + axis], sourceColors[sample.originalIndex * 3 + axis]);
+      }
+    }
+    for (const coordinate of data.positions) assert.ok(Number.isFinite(coordinate));
+  }
+});
+
+test("truncated or invalid downloads are rejected before allocating GPU geometry", () => {
+  const raw = gunzipSync(readFileSync(directory + manifest.environment.preview.file));
+  const buffer = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength);
+  assert.throws(() => decodePointCloud(buffer.slice(0, -1)), /Incomplete/);
+  assert.throws(() => decodePointCloud(new ArrayBuffer(8)), /header/);
+  const invalid = buffer.slice(0);
+  new DataView(invalid).setUint32(4, 0xffffffff, true);
+  assert.throws(() => decodePointCloud(invalid), /format/);
+});
