@@ -1,7 +1,7 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Line, OrbitControls } from "@react-three/drei";
-import { RotateCcw } from "lucide-react";
+import { Box, Network, Pause, Play, RotateCcw } from "lucide-react";
 import * as THREE from "three";
 import type { ComponentRef, ReactNode, RefObject } from "react";
 import type { Observation, Scenario, Vec3 } from "../data/scenarios";
@@ -13,23 +13,29 @@ import { createSceneShell, deviceProfile, loadPreviewParts, loadEnvironmentDetai
 import type { SceneAssets } from "../engine/sceneAssets";
 import type { PointCloud } from "../engine/pointCloud";
 import FrameworkDock from "./FrameworkDock";
+import ContextGraph from "./ContextGraph";
+import SceneTelemetry from "./SceneTelemetry";
+import "./SandboxPresentation.css";
 
 const PALETTE = { environment: "#abc6d8", scan: "#7ddbd5", reasoning: "#dfc596" };
 // Spread the six fixed anchors across the map, including on narrow screens.
 const EVIDENCE_FRAMES = [0, 1566, 4700, 7833, 9400, 12534];
 type Layers = [boolean, boolean, boolean];
+const ALL_LAYERS: Layers = [true,true,true];
+const NODE_STEM: Vec3[] = [[0,-.03,0],[0,-.48,0]];
 
 function Elevation({ spread, from, to, children }: { spread: RefObject<number>; from: number; to: number; children: ReactNode }) {
   const group = useRef<THREE.Group>(null);
   const initialY = useRef(THREE.MathUtils.lerp(from,to,spread.current));
   useFrame(() => {
     if (group.current) group.current.position.y = THREE.MathUtils.lerp(from,to,spread.current);
-  });
+  },-1);
   return <group ref={group} position={[0, initialY.current, 0]}>{children}</group>;
 }
 
 const Plate = memo(function Plate({ width, depth, color, grid = false }: { width: number; depth: number; color: string; grid?: boolean }) {
-  const outline: Vec3[] = [[-width/2,0,-depth/2],[width/2,0,-depth/2],[width/2,0,depth/2],[-width/2,0,depth/2],[-width/2,0,-depth/2]];
+  const outline = useMemo<Vec3[]>(()=>[[-width/2,0,-depth/2],[width/2,0,-depth/2],[width/2,0,depth/2],[-width/2,0,depth/2],[-width/2,0,-depth/2]],[width,depth]);
+  const corners = useMemo(()=>[-1,1].flatMap(x=>[-1,1].map(z=>[[x*(width/2-.5),0.01,z*depth/2],[x*width/2,0.01,z*depth/2],[x*width/2,0.01,z*(depth/2-.5)]] as Vec3[])),[width,depth]);
   const gridPoints = useMemo(() => {
     const points: Vec3[] = [];
     if (grid) {
@@ -45,11 +51,11 @@ const Plate = memo(function Plate({ width, depth, color, grid = false }: { width
     </mesh>
     <Line points={outline} color={color} transparent opacity={0.36} lineWidth={0.8} />
     {grid && <Line segments points={gridPoints} color={color} transparent opacity={0.065} lineWidth={0.55} />}
-    {[-1,1].flatMap(x => [-1,1].map(z => <Line key={`${x}${z}`} points={[[x*(width/2-.5),0.01,z*depth/2],[x*width/2,0.01,z*depth/2],[x*width/2,0.01,z*(depth/2-.5)]]} color={color} lineWidth={1.8} />))}
+    {corners.map((points,index)=><Line key={index} points={points} color={color} lineWidth={1.8}/>)}
   </group>;
 });
 
-function EnvironmentLayer({ scene, assets }: { scene: LayerScene; assets: SceneAssets }) {
+const EnvironmentLayer = memo(function EnvironmentLayer({ scene, assets }: { scene: LayerScene; assets: SceneAssets }) {
   const map = useMemo(() => {
     if (!assets.map) return null;
     const texture = new THREE.Texture(assets.map);
@@ -71,9 +77,9 @@ function EnvironmentLayer({ scene, assets }: { scene: LayerScene; assets: SceneA
     <Plate width={scene.width} depth={scene.depth} color={PALETTE.environment} />
     {assets.environment && <RecordedSurfaces cloud={assets.environment} pointSize={assets.pointSize}/>}
   </group>;
-}
+});
 
-function RecordedSurfaces({cloud,pointSize}:{cloud:PointCloud;pointSize:number}) {
+const RecordedSurfaces = memo(function RecordedSurfaces({cloud,pointSize}:{cloud:PointCloud;pointSize:number}) {
   const geometry=useMemo(()=>{
     const g=new THREE.BufferGeometry();
     g.setAttribute("position",new THREE.BufferAttribute(cloud.positions,3));
@@ -95,7 +101,7 @@ function RecordedSurfaces({cloud,pointSize}:{cloud:PointCloud;pointSize:number})
   useEffect(()=>()=>geometry.dispose(),[geometry]);
   useEffect(()=>()=>material.dispose(),[material]);
   return <points geometry={geometry} material={material}/>;
-}
+});
 
 const pointVertex = `
   uniform float uTime;
@@ -125,7 +131,8 @@ const pointFragment = `
     gl_FragColor = vec4(c, (.36 + vHeight * .24 + vSweep * .12) * smoothstep(.5,.18,radius));
   }
 `;
-function ScanLayer({ scene, cloud, reduced }: { scene: LayerScene; cloud: PointCloud; reduced: boolean }) {
+const ScanLayer = memo(function ScanLayer({ scene, cloud, reduced }: { scene: LayerScene; cloud: PointCloud; reduced: boolean }) {
+  const route=useMemo(()=>scene.route.map(p=>[p[0],.04,p[2]] as Vec3),[scene.route]);
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(cloud.positions, 3));
@@ -151,24 +158,32 @@ function ScanLayer({ scene, cloud, reduced }: { scene: LayerScene; cloud: PointC
       <planeGeometry args={[scene.width,1.45]} />
       <meshBasicMaterial color="#76edec" transparent opacity={0.045} side={THREE.DoubleSide} depthWrite={false} blending={THREE.AdditiveBlending} />
     </mesh>}
-    {scene.route.length>1 && <Line points={scene.route.map(p=>[p[0],.04,p[2]] as Vec3)} color="#88e1d4" transparent opacity={.45} lineWidth={1} dashed dashSize={.08} gapSize={.07} />}
+    {route.length>1 && <Line points={route} color="#88e1d4" transparent opacity={.45} lineWidth={1} dashed dashSize={.08} gapSize={.07} />}
   </group>;
-}
+});
 
-function ProjectLabel({ position, id, overlays }: { position: Vec3; id: string; overlays: Map<string, HTMLButtonElement> }) {
+function ProjectLabel({ position, id, overlays, enabled }: { position: Vec3; id: string; overlays: Map<string, HTMLButtonElement>; enabled:boolean }) {
   const anchor = useRef<THREE.Group>(null);
   const projected = useMemo(() => new THREE.Vector3(), []);
+  const written=useRef<{element:HTMLButtonElement;transform:string;visibility:string}|null>(null);
   useFrame(({ camera, size }) => {
+    if(!enabled)return;
     const element = overlays.get(id);
     if (!element || !anchor.current) return;
     anchor.current.getWorldPosition(projected).project(camera);
-    element.style.transform = `translate3d(${(projected.x+1)*size.width/2}px,${(1-projected.y)*size.height/2}px,0) translate(-50%,-50%)`;
-    element.style.visibility = projected.z >= -1 && projected.z <= 1 ? "visible" : "hidden";
+    const transform=`translate3d(${((projected.x+1)*size.width/2).toFixed(2)}px,${((1-projected.y)*size.height/2).toFixed(2)}px,0) translate(-50%,-50%)`;
+    const visibility=projected.z >= -1 && projected.z <= 1 ? "visible" : "hidden";
+    const previous=written.current;
+    if(previous?.element!==element||previous.transform!==transform||previous.visibility!==visibility){
+      if(previous?.element!==element||previous.transform!==transform)element.style.transform=transform;
+      if(previous?.element!==element||previous.visibility!==visibility)element.style.visibility=visibility;
+      written.current={element,transform,visibility};
+    }
   });
   return <group ref={anchor} position={position} />;
 }
 
-function FlowEdge({ start, end, crosscheck, active, reduced }: { start: Vec3; end: Vec3; crosscheck: boolean; active: boolean; reduced: boolean }) {
+function FlowEdge({ start, end, crosscheck, active, reduced, enabled }: { start: Vec3; end: Vec3; crosscheck: boolean; active: boolean; reduced: boolean; enabled:boolean }) {
   const curve = useMemo(() => {
     const a = new THREE.Vector3(...start), b = new THREE.Vector3(...end);
     const middle = a.clone().lerp(b,.5);
@@ -178,7 +193,7 @@ function FlowEdge({ start, end, crosscheck, active, reduced }: { start: Vec3; en
   const points = useMemo(()=>curve.getPoints(40),[curve]);
   const spark = useRef<THREE.Mesh>(null);
   useFrame(({clock})=>{
-    if (spark.current) spark.current.position.copy(curve.getPoint((clock.elapsedTime*(crosscheck?-.22:.3)+1000)%1));
+    if (enabled&&spark.current) curve.getPoint((clock.elapsedTime*(crosscheck?-.22:.3)+1000)%1,spark.current.position);
   });
   return <group>
     <Line points={points} color={crosscheck?"#f0c77d":"#d4f0d0"} lineWidth={active?1.8:1.1} transparent opacity={crosscheck?.85:.6} dashed={crosscheck} dashSize={.12} gapSize={.08} />
@@ -189,10 +204,10 @@ function FlowEdge({ start, end, crosscheck, active, reduced }: { start: Vec3; en
   </group>;
 }
 
-function ReasoningLayer({ state, scene, overlays, reduced, layout }: { layout: Record<string,Vec3>; scenario: Scenario; state: ReasoningState; scene: LayerScene; overlays: Map<string,HTMLButtonElement>; reduced: boolean }) {
-  return <group>
+function ReasoningLayer({ state, scene, overlays, reduced, layout, enabled }: { layout: Record<string,Vec3>; scenario: Scenario; state: ReasoningState; scene: LayerScene; overlays: Map<string,HTMLButtonElement>; reduced: boolean; enabled:boolean }) {
+  return <group visible={enabled}>
     <Plate width={scene.width} depth={scene.depth} color={PALETTE.reasoning} grid />
-    {state.visibleGraphEdges.map(e=><FlowEdge key={`${e.from}-${e.to}`} start={layout[e.from]} end={layout[e.to]} crosscheck={e.kind==="crosscheck"} active={state.activeNodeIds.includes(e.to)} reduced={reduced} />)}
+    {state.visibleGraphEdges.map(e=><FlowEdge key={`${e.from}-${e.to}`} start={layout[e.from]} end={layout[e.to]} crosscheck={e.kind==="crosscheck"} active={state.activeNodeIds.includes(e.to)} reduced={reduced} enabled={enabled} />)}
     {state.visibleGraphNodes.map(node=>{
       const p=layout[node.id];
       const active=state.activeNodeIds.includes(node.id), revisit=state.revisitedNodeIds.includes(node.id);
@@ -202,19 +217,31 @@ function ReasoningLayer({ state, scene, overlays, reduced, layout }: { layout: R
           <ringGeometry args={[.21,.24,48]} /><meshBasicMaterial color={color} transparent opacity={active||revisit?1:.6} side={THREE.DoubleSide} />
         </mesh>
         <mesh position={[0,.04,0]}><sphereGeometry args={[.08,16,16]} /><meshBasicMaterial color={color} toneMapped={false}/></mesh>
-        <Line points={[[0,-.03,0],[0,-.48,0]]} color={color} transparent opacity={.3} lineWidth={.7} />
-        <ProjectLabel position={[0,.3,0]} id={node.id} overlays={overlays}/>
+        <Line points={NODE_STEM} color={color} transparent opacity={.3} lineWidth={.7} />
+        <ProjectLabel position={[0,.3,0]} id={node.id} overlays={overlays} enabled={enabled}/>
       </group>;
     })}
   </group>;
 }
 
-function LayerGuides({ scene, spread }: {scene:LayerScene; spread:RefObject<number>}) {
+function LayerGuides({ scene, spread, enabled }: {scene:LayerScene; spread:RefObject<number>; enabled:boolean}) {
   const group = useRef<THREE.Group>(null);
+  const corners=useMemo(()=>[-1,1].flatMap(x=>[-1,1].map(z=>[[x*scene.width/2,0,z*scene.depth/2],[x*scene.width/2,5.25,z*scene.depth/2]] as Vec3[])),[scene.width,scene.depth]);
   useFrame(() => {
     if (group.current) group.current.scale.y = THREE.MathUtils.lerp(1.85 / 5.25,1,spread.current);
   });
-  return <group ref={group}>{[-1,1].flatMap(x=>[-1,1].map(z=><Line key={`${x}${z}`} points={[[x*scene.width/2,0,z*scene.depth/2],[x*scene.width/2,5.25,z*scene.depth/2]]} color="#95b6a6" dashed dashSize={.05} gapSize={.12} lineWidth={.7} transparent opacity={.22} />))}</group>;
+  return <group ref={group} visible={enabled}>{corners.map((points,index)=><Line key={index} points={points} color="#95b6a6" dashed dashSize={.05} gapSize={.12} lineWidth={.7} transparent opacity={.22} />)}</group>;
+}
+
+/** Ambient effects get 30 fps; controls and layer transitions request extra frames. */
+function AmbientFrames({ enabled }: {enabled:boolean}) {
+  const invalidate=useThree(state=>state.invalidate);
+  useEffect(()=>{
+    if(!enabled)return;
+    const timer=window.setInterval(()=>invalidate(),1000/30);
+    return()=>window.clearInterval(timer);
+  },[enabled,invalidate]);
+  return null;
 }
 
 function CameraRig({ resetKey, reduced, overview, onDrag }: {resetKey:number; reduced:boolean; overview:boolean; onDrag:(dragging:boolean)=>void}) {
@@ -231,7 +258,7 @@ function CameraRig({ resetKey, reduced, overview, onDrag }: {resetKey:number; re
   return <OrbitControls ref={controls} target={[0,2.5,0]} enableZoom={false} enablePan={false} enableDamping={!reduced} dampingFactor={.07} rotateSpeed={.65} minPolarAngle={.3} maxPolarAngle={1.3} onStart={()=>onDrag(true)} onEnd={()=>onDrag(false)} />;
 }
 
-function SceneContent({ scenario, state, expanded, layers, overlays, reduced, assets, overview, dockRef }: {assets:SceneAssets; overview:boolean;scenario:Scenario; state:ReasoningState; expanded:boolean; layers:Layers; overlays:Map<string,HTMLButtonElement>; reduced:boolean; dockRef:RefObject<HTMLDivElement|null>}) {
+const SceneContent = memo(function SceneContent({ scenario, state, expanded, layers, overlays, reduced, assets, overview, dockRef, visible }: {assets:SceneAssets; overview:boolean;scenario:Scenario; state:ReasoningState; expanded:boolean; layers:Layers; overlays:Map<string,HTMLButtonElement>; reduced:boolean; dockRef:RefObject<HTMLDivElement|null>; visible:boolean}) {
   const scene = assets.scene;
   const layout=useMemo(()=>{
     if(!overview)return reasoningLayout;
@@ -243,12 +270,13 @@ function SceneContent({ scenario, state, expanded, layers, overlays, reduced, as
   const spread=useRef(expanded?1:0);
   const published=useRef("");
   const invalidate=useThree(state=>state.invalidate);
-  useEffect(()=>{if(reduced)invalidate();},[expanded,reduced,invalidate]);
+  useEffect(()=>{invalidate();},[expanded,reduced,visible,invalidate]);
   // Drive the physical planes and the framework cards from the same frame.
   useFrame((_,dt)=>{
     const target=expanded?1:0;
     const next=reduced?target:THREE.MathUtils.damp(spread.current,target,3.6,Math.min(dt,.05));
     spread.current=Math.abs(next-target)<.0005?target:next;
+    if(visible&&spread.current!==target)invalidate();
     const value=spread.current.toFixed(4);
     if(dockRef.current&&published.current!==value){
       dockRef.current.style.setProperty("--layer-spread",value);
@@ -256,12 +284,12 @@ function SceneContent({ scenario, state, expanded, layers, overlays, reduced, as
     }
   },-2);
   return <group>
-    {(layers[1]||layers[2])&&<LayerGuides scene={scene} spread={spread}/>}
+    {(layers[1]||layers[2])&&<LayerGuides scene={scene} spread={spread} enabled={!overview||expanded}/>}
     {layers[0] && <EnvironmentLayer scene={scene} assets={assets}/>}
     <Elevation spread={spread} from={.06} to={2.55}>{layers[1]&&<ScanLayer scene={scene} cloud={assets.scan} reduced={reduced}/>}</Elevation>
-    <Elevation spread={spread} from={1.85} to={5.25}>{layers[2]&&<ReasoningLayer layout={layout} scenario={scenario} state={state} scene={scene} overlays={overlays} reduced={reduced}/>}</Elevation>
+    <Elevation spread={spread} from={1.85} to={5.25}>{layers[2]&&<ReasoningLayer layout={layout} scenario={scenario} state={state} scene={scene} overlays={overlays} reduced={reduced} enabled={!overview||expanded}/>}</Elevation>
   </group>;
-}
+});
 
 function FirstFrame({ onReady }: { onReady?: () => void }) {
   const frame = useRef(0);
@@ -277,7 +305,8 @@ function FirstFrame({ onReady }: { onReady?: () => void }) {
 export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,onSelect,overview=false,onReady}: {onReady?:()=>void;overview?:boolean; scenario:Scenario; state:ReasoningState; hero?:boolean; visible?:boolean; resetKey?:number; onSelect?:(o:Observation)=>void}) {
   const reduced=useReducedMotion();
   const [expanded,setExpanded]=useState(true);
-  const layers:Layers=[true,true,true];
+  const [autoplay,setAutoplay]=useState(!reduced);
+  const layers=ALL_LAYERS;
   const [cameraReset,setCameraReset]=useState(0);
   const [assets,setAssets]=useState<SceneAssets|null>(()=>overview?createSceneShell():null);
   const [loadFailed,setLoadFailed]=useState(false);
@@ -293,6 +322,10 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
   const [pageVisible,setPageVisible]=useState(()=>!document.hidden);
   const dockRef=useRef<HTMLDivElement>(null);
   const overlays=useRef(new Map<string,HTMLButtonElement>()).current;
+  const handleDrag=useCallback((value:boolean)=>{
+    setDragging(value);
+    if(value){setDetailRequested(true);setAutoplay(false);}
+  },[]);
   useEffect(()=>{
     let active=true;
     setLoadFailed(false);
@@ -330,27 +363,42 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
     return()=>document.removeEventListener("visibilitychange",update);
   },[]);
   useEffect(()=>{
-    if(reduced)return;
+    if(reduced||!autoplay)return;
     if(!visible||!pageVisible||dragging||frameworkHovered||frameworkFocused||!scene)return;
-    const timer=window.setTimeout(()=>setExpanded(value=>!value),expanded?4000:3000);
+    const timer=window.setTimeout(()=>setExpanded(value=>!value),expanded?6500:10000);
     return()=>window.clearTimeout(timer);
-  },[expanded,visible,pageVisible,reduced,dragging,frameworkHovered,frameworkFocused,scene]);
+  },[expanded,visible,pageVisible,reduced,autoplay,dragging,frameworkHovered,frameworkFocused,scene]);
+  const chooseView=(next:boolean)=>{setExpanded(next);setAutoplay(false);};
   if(lost)throw new Error("WebGL context lost");
-  return <div className={`layered-world ${overview?"overview-world":""}`} data-environment-points={assets?.environment?.pointCount??0} data-scan-points={assets?.scan.pointCount??0} data-map-width={assets?.map?.width??0} data-layout={expanded?"exploded":"aligned"} data-layers={layers.map(Number).join("")}>
+  return <div className={`layered-world ${overview?"overview-world":""}`} data-environment-points={assets?.environment?.pointCount??0} data-scan-points={assets?.scan.pointCount??0} data-map-width={assets?.map?.width??0} data-layout={expanded?"exploded":overview?"planar":"aligned"} data-layers={layers.map(Number).join("")}>
+    <div className="sandbox-scene">
     <Canvas
       aria-label="Three-layer environment, spatial scan, and reasoning sandbox"
       orthographic camera={{position:[11,10.5,15],zoom:36,near:.1,far:100}}
       dpr={profile.compact?1:[1,1.5]} gl={{antialias:!profile.compact,alpha:true,powerPreference:"default"}}
-      frameloop={visible&&pageVisible&&!reduced?"always":"demand"}
+      frameloop="demand"
       onCreated={({gl})=>{gl.setClearColor("#0c181a",0);gl.domElement.addEventListener("webglcontextlost",e=>{e.preventDefault();setLost(true);},{once:true});}}
     >
       <ambientLight intensity={1.5}/><directionalLight position={[3,10,7]} intensity={2}/>
-      {assets && <><SceneContent scenario={scenario} state={state} expanded={expanded} layers={layers} overlays={overlays} reduced={reduced} assets={assets} overview={overview} dockRef={dockRef}/><FirstFrame onReady={onReady}/></>}
-      <CameraRig resetKey={resetKey+cameraReset} reduced={reduced} overview={overview} onDrag={value=>{setDragging(value);if(value)setDetailRequested(true);}}/>
+      <AmbientFrames enabled={visible&&pageVisible&&!reduced&&(!overview||expanded)}/>
+      {import.meta.env.DEV&&<SceneTelemetry/>}
+      {assets && <><SceneContent scenario={scenario} state={state} expanded={expanded} layers={layers} overlays={overlays} reduced={reduced} assets={assets} overview={overview} dockRef={dockRef} visible={visible&&pageVisible}/><FirstFrame onReady={onReady}/></>}
+      <CameraRig resetKey={resetKey+cameraReset} reduced={reduced} overview={overview} onDrag={handleDrag}/>
     </Canvas>
+    </div>
+    {overview&&<>
+      <div className="sandbox-view-controls" role="group" aria-label="Sandbox presentation">
+        <div className="sandbox-view-switch" role="group" aria-label="Graph perspective">
+          <button type="button" aria-pressed={!expanded} onClick={()=>chooseView(false)}><Network size={15}/><span>2D context</span></button>
+          <button type="button" aria-pressed={expanded} onClick={()=>chooseView(true)}><Box size={15}/><span>3D layers</span></button>
+        </div>
+        {!reduced&&<button type="button" className="sandbox-autoplay" aria-label={autoplay?"Pause view animation":"Play view animation"} aria-pressed={autoplay} title={autoplay?"Pause view animation":"Play view animation"} onClick={()=>setAutoplay(value=>!value)}>{autoplay?<Pause size={13}/>:<Play size={13}/>}</button>}
+      </div>
+      <ContextGraph scenario={scenario} state={state} active={!expanded} animate={visible&&pageVisible&&!reduced} onInteract={()=>setAutoplay(false)}/>
+    </>}
     <FrameworkDock dockRef={dockRef} expanded={expanded} animate={visible&&pageVisible&&!reduced} onHover={setFrameworkHovered} onFocus={setFrameworkFocused}
-      onToggle={()=>setExpanded(value=>!value)}/>
-    <div className="reasoning-labels" aria-label="Spatial reasoning nodes">
+      onToggle={()=>chooseView(!expanded)}/>
+    <div className="reasoning-labels" aria-label="Spatial reasoning nodes" aria-hidden={overview&&!expanded}>
       {layers[2] && state.visibleGraphNodes.map((node)=>{
         const observation=scenario.observations.find(o=>o.id===node.observationId);
         const revisit=state.revisitedNodeIds.includes(node.id);
