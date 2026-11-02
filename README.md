@@ -1,3 +1,5 @@
+![VimRobo teaser](assets/teaser.jpg)
+
 <div align="center">
 
 # VimRobo
@@ -27,11 +29,3 @@
 - **Evolving evidence graphs:** support deep, branching searches that reuse observations and ground answers in retrieved evidence.
 
 The [interactive website](https://atomrecur.github.io/VimRobo/) brings together a full-sequence CODa environment, a LiDAR memory layer, and an illustrative reasoning graph. Four recorded cases show a search chain, branching retrieval, temporal verification, and deeper boundary searches, with distinct evidence images and original citation links.
-
-## 💻 Code & Website
-
-- `src/` is reserved for the research implementation.
-- The interactive website, its source, and all visualization assets live on [`branch-pages`](https://github.com/AtomRecur/VimRobo/tree/branch-pages).
-- Paper and model links will be added when available.
-
-README organization is inspired by [Alibaba-NLP/VRAG](https://github.com/Alibaba-NLP/VRAG).
