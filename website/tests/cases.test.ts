@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync,existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { layoutCase } from '../src/data/caseTypes.ts';
+import { caseEdgePath, layoutCase } from '../src/data/caseTypes.ts';
 import type { ResearchCase } from '../src/data/caseTypes.ts';
 const data=JSON.parse(readFileSync('src/data/researchCases.json','utf8'));
 const cases=data.cases as ResearchCase[];
@@ -31,6 +31,66 @@ test('all 129 real frames are local and every inspected reference resolves',()=>
 test('case layouts keep nodes separated and preserve a place for the early citation',()=>{
  for(const c of cases){const l=layoutCase(c);const p=Object.values(l.positions);
    for(let i=0;i<p.length;i++)for(let j=i+1;j<p.length;j++)assert.ok(p[i].x+p[i].width<=p[j].x||p[j].x+p[j].width<=p[i].x||p[i].y+p[i].height<=p[j].y||p[j].y+p[j].height<=p[i].y);
+ }
+});
+test('responsive layouts preserve readable nodes and the direction of every recorded edge',()=>{
+ for(const c of cases)for(const orientation of ['horizontal','vertical'] as const){
+  for(const width of orientation==='vertical'?[260,284,360,700]:[780,1100,1560]){
+   const layout=layoutCase(c,orientation,width);
+   const nodes=Object.values(layout.positions);
+   assert.equal(nodes.length,c.nodes.length);
+   if(orientation==='vertical')assert.equal(layout.width,width,'mobile graph must fit its container');
+   for(const node of nodes){
+    assert.ok(node.x>=0&&node.y>=0&&node.x+node.width<=layout.width+.001&&node.y+node.height<=layout.height);
+    assert.ok(node.width>=150,'labels must not shrink with the viewport');
+   }
+   for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+    const a=nodes[i],b=nodes[j];
+    assert.ok(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y);
+   }
+   for(const edge of c.edges){
+    const a=layout.positions[edge.from],b=layout.positions[edge.to];
+    assert.ok(orientation==='vertical'?a.y+a.height<b.y:a.x+a.width<b.x,'edges must follow the reading direction');
+   }
+  }
+ }
+ for(const c of cases)assert.equal(layoutCase(c,'horizontal',1270).width,1270,'all cases fit a standard desktop graph area');
+ assert.equal(layoutCase(cases[0],'horizontal',910).width,910,'the linear case fits a smaller desktop graph area');
+});
+
+// Sample the SVG geometry to catch routes that cross unrelated cards or leave the canvas.
+function sampleEdge(path:string){
+ const points:[number,number][]=[];
+ let x=0,y=0;
+ for(const match of path.matchAll(/([MHVQC])([^MHVQC]*)/g)){
+  const command=match[1],v=match[2].trim().split(/[ ,]+/).map(Number);
+  const startX=x,startY=y;
+  if(command==='M'){[x,y]=v;points.push([x,y]);continue;}
+  for(let i=1;i<=30;i++){
+   const t=i/30,u=1-t;
+   if(command==='H'){x=startX+(v[0]-startX)*t;y=startY;}
+   else if(command==='V'){x=startX;y=startY+(v[0]-startY)*t;}
+   else if(command==='Q'){x=u*u*startX+2*u*t*v[0]+t*t*v[2];y=u*u*startY+2*u*t*v[1]+t*t*v[3];}
+   else if(command==='C'){x=u*u*u*startX+3*u*u*t*v[0]+3*u*t*t*v[2]+t*t*t*v[4];y=u*u*u*startY+3*u*u*t*v[1]+3*u*t*t*v[3]+t*t*t*v[5];}
+   points.push([x,y]);
+  }
+ }
+ return points;
+}
+test('branches and citations stay inside the canvas and avoid unrelated node cards',()=>{
+ for(const c of cases)for(const orientation of ['horizontal','vertical'] as const){
+  const layout=layoutCase(c,orientation,orientation==='vertical'?284:1100);
+  c.edges.forEach((edge,index)=>{
+   const points=sampleEdge(caseEdgePath(layout,edge,index));
+   assert.ok(points.length>1);
+   for(const [x,y] of points){
+    assert.ok(Number.isFinite(x)&&Number.isFinite(y)&&x>=0&&x<=layout.width+.001&&y>=0&&y<=layout.height+.001);
+    for(const [id,node] of Object.entries(layout.positions)){
+     if(id===edge.from||id===edge.to)continue;
+     assert.ok(!(x>node.x+.01&&x<node.x+node.width-.01&&y>node.y+.01&&y<node.y+node.height-.01),`${c.id}: ${edge.from} → ${edge.to} crosses ${id}`);
+    }
+   }
+  });
  }
 });
 test('each retrieval displays a distinct image from its own recorded results and a grounded search note',()=>{

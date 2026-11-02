@@ -1,7 +1,8 @@
 import { lazy, Suspense, useRef } from "react";
-import { ArrowUpRight, FileText, X } from "lucide-react";
+import { ArrowUpRight, X } from "lucide-react";
 import { research } from "./data/research";
 import HeroSandbox from "./components/HeroSandbox";
+import ResearchLinks from "./components/ResearchLinks";
 import { useVisibility } from "./hooks";
 const ResearchCases = lazy(() => import("./components/ResearchShowcase"));
 
@@ -21,21 +22,22 @@ export default function App() {
       <a className="skip-link" href="#cases">
         Skip to the research cases
       </a>
-      <header className="site-header" id="top">
-        <a className="wordmark" href="#top" aria-label="VimRobo home">
-          <strong className="brand-name">VimRobo</strong>
-        </a>
-        <nav aria-label="Main navigation">
-          <a href="#explorer">
-            Explore the world <ArrowUpRight size={14} />
+      <header className="site-header">
+        <div className="site-header-inner">
+          <a className="wordmark" href="#top" aria-label="VimRobo home">
+            <strong className="brand-name">VimRobo</strong>
           </a>
-          <a href="#cases">The cases <ArrowUpRight size={14}/></a>
-          <button onClick={() => paper.current?.showModal()}>
-            <FileText size={14} /> About the research
-          </button>
-        </nav>
+          <nav className="site-navigation" aria-label="Main navigation">
+            <div className="header-sections">
+              <a href="#explorer">Explore</a>
+              <a href="#cases">Cases</a>
+              <button onClick={() => paper.current?.showModal()}>About</button>
+            </div>
+            <ResearchLinks />
+          </nav>
+        </div>
       </header>
-      <main>
+      <main id="top">
         <HeroSandbox />
         <DeferredCases />
       </main>

@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import { useVisibility } from "../hooks";
 import { loadScenePreview } from "../engine/sceneAssets";
-import ResearchLinks from "./ResearchLinks";
 const Sandbox = lazy(() => import("./FloatingSandbox"));
 
 class SceneBoundary extends Component<{ children: ReactNode; onError: () => void }, { error: boolean }> {
@@ -32,7 +31,6 @@ export default function SandboxView(props: React.ComponentProps<typeof Sandbox>)
         </Suspense>
       </SceneBoundary>
     </div>
-    <ResearchLinks />
     {status === "loading" && <div className="scene-status" role="status"><span className="scene-progress"/><span>Loading interactive view</span></div>}
     {status === "error" && <button className="scene-retry" onClick={() => window.location.reload()}><RotateCcw size={16}/>Retry 3D</button>}
   </div>;

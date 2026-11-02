@@ -1,0 +1,182 @@
+:root {
+  --site-header-height: 76px;
+}
+
+html {
+  scroll-padding-top: calc(var(--site-header-height) + 24px);
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  width: 100%;
+  max-width: none;
+  height: var(--site-header-height);
+  background: #090f17e8;
+  border-bottom: 1px solid #9fb9ce1c;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.site-header-inner {
+  width: calc(100% - 96px);
+  max-width: 1800px;
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.site-header .wordmark {
+  font-size: 32px;
+}
+
+.site-header .site-navigation {
+  margin-left: auto;
+  gap: 28px;
+}
+
+.header-sections,
+.header-resources {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.site-header .header-sections a,
+.site-header .header-sections button {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #a9bac8;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.site-header .header-sections a:hover,
+.site-header .header-sections button:hover {
+  color: #d4f5ed;
+  background: transparent;
+}
+
+.header-resources {
+  gap: 8px;
+  padding-left: 24px;
+  border-left: 1px solid #a3bed326;
+}
+
+.site-header .header-resource {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #c1d2de;
+  font: 500 13px var(--sans);
+  white-space: nowrap;
+  transition: color .2s, background .2s, border-color .2s;
+}
+
+.site-header a.header-resource:hover {
+  color: #e4fff8;
+  border-color: #93d9cf50;
+  background: #7fd6c913;
+}
+
+.site-header .header-resource-primary {
+  margin-left: 4px;
+  padding-inline: 17px;
+  color: #102923;
+  background: #b8eddc;
+  border-color: #b8eddc;
+}
+
+.site-header a.header-resource-primary:hover {
+  color: #0b211b;
+  background: #d0f9e9;
+  border-color: #d0f9e9;
+}
+
+.site-header .pending-resource {
+  color: #9cabb8;
+  cursor: default;
+}
+
+.header-resource .resource-tooltip {
+  z-index: 1;
+  top: calc(100% + 12px);
+  padding: 8px 11px;
+  border-radius: 6px;
+  color: #c1d2de;
+  background: #14212d;
+  box-shadow: 0 8px 24px #0004;
+}
+
+.header-resource:focus-visible {
+  outline: 2px solid #a0dfcf;
+  outline-offset: 4px;
+}
+
+.header-resource:focus-visible .resource-tooltip {
+  opacity: 1;
+}
+
+.cases-intro h2 {
+  margin-top: 0;
+}
+
+@media (max-width: 1100px) {
+  .site-header-inner { width: calc(100% - 48px); }
+  .site-header .site-navigation { gap: 20px; }
+  .header-sections { gap: 20px; }
+  .header-resources { padding-left: 16px; gap: 4px; }
+  .site-header .header-resource { padding-inline: 10px; }
+}
+
+@media (max-width: 800px) {
+  .site-header-inner { gap: 20px; }
+  .site-header .wordmark { font-size: 28px; }
+  .site-header .site-navigation { gap: 16px; }
+  .header-sections { gap: 16px; }
+  .header-resources { padding-left: 12px; gap: 2px; }
+  .site-header .header-resource { font-size: 12px; gap: 6px; padding-inline: 8px; }
+  .resource-arrow { display: none; }
+}
+
+@media (max-width: 700px) {
+  :root { --site-header-height: 112px; }
+  .site-header-inner { position: relative; align-items: flex-start; padding-top: 17px; }
+  .site-header .wordmark { font-size: 28px; }
+  .site-header .site-navigation { padding-top: 0; }
+  .site-header .header-sections a,
+  .site-header .header-sections button { min-height: 30px; font-size: 12px; }
+  .header-resources { position: absolute; right: 0; bottom: 12px; gap: 8px; padding-left: 0; border-left: 0; }
+  .site-header .header-resource { min-height: 36px; padding-inline: 12px; font-size: 12px; }
+  .site-header .header-resource-primary { margin-left: 2px; }
+}
+
+@media (max-width: 520px) {
+  .site-header-inner { width: calc(100% - 32px); }
+}
+
+@media (max-width: 360px) {
+  .site-header-inner { gap: 12px; }
+  .site-header .wordmark { font-size: 26px; }
+  .header-sections { gap: 12px; }
+  .header-resources { gap: 4px; }
+  .site-header .header-resource { padding-inline: 8px; font-size: 11px; gap: 5px; }
+  .header-resource > svg { width: 14px; height: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header .header-resource,
+  .header-resource .resource-tooltip { transition: none; }
+}
