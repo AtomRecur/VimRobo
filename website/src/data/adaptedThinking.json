@@ -1,0 +1,155 @@
+{
+  "records": [
+    {
+      "caseId": "13",
+      "nodeId": "door_opener_text",
+      "text": "I need to identify the door-opening event before inspecting a clothing detail. The person who helped at the door is the reference for the question. I will search for \"person opened door\" first, then use the returned event to guide a closer look at the shoes.",
+      "contextNodeIds": []
+    },
+    {
+      "caseId": "13",
+      "nodeId": "door_opener_shoes",
+      "text": "Node 01 locates a person at the open glass door around 14:35:15. That gives me an event to revisit, but the question asks specifically about footwear. I will search that time and inspect the person's lower legs and shoes in the returned clip.",
+      "contextNodeIds": [
+        "door_opener_text"
+      ]
+    },
+    {
+      "caseId": "13",
+      "nodeId": "door_opener_shoes_detail",
+      "text": "Node 02 brings the person's shoes into the retrieved doorway sequence. I still need to check their color carefully before giving an answer. I will repeat the 14:35:15 lookup and re-examine the footwear in the same recorded event, keeping the person identified in node 01 as the reference.",
+      "contextNodeIds": [
+        "door_opener_text",
+        "door_opener_shoes"
+      ]
+    },
+    {
+      "caseId": "13",
+      "nodeId": "answer",
+      "text": "Node 03 shows white shoes beside the doorway. The preceding steps connect that detail to the person who opened the door: node 01 identifies the event, and node 02 revisits the person within it. I can now answer the color question and use node 03 as the direct supporting evidence.",
+      "contextNodeIds": [
+        "door_opener_text",
+        "door_opener_shoes",
+        "door_opener_shoes_detail"
+      ]
+    },
+    {
+      "caseId": "04",
+      "nodeId": "stairs_text",
+      "text": "I need a location for the stairs before I can search for somewhere to sit nearby. The question gives me a landmark and a spatial relationship to resolve. I will start with a search for \"stairs\" and use its recorded position as the anchor for the next searches.",
+      "contextNodeIds": []
+    },
+    {
+      "caseId": "04",
+      "nodeId": "seating_near_stairs_position",
+      "text": "Node 01 places the stairs near the recorded position [-2.36, 94.4]. I will open a position-based branch from that anchor and retrieve nearby views of the surrounding area. This should let me inspect the local setting and how any seating appears in relation to the stairs.",
+      "contextNodeIds": [
+        "stairs_text"
+      ]
+    },
+    {
+      "caseId": "04",
+      "nodeId": "bench_near_stairs",
+      "text": "I have the stairs anchor from node 01, so I can make another search from the same location. I will use the more specific query \"bench\", ranked nearest to [-2.36, 94.4]. This branch will provide concrete seating candidates to compare with the broader seating search.",
+      "contextNodeIds": [
+        "stairs_text",
+        "seating_near_stairs"
+      ]
+    },
+    {
+      "caseId": "08",
+      "nodeId": "brick_street_text",
+      "text": "I need to locate the brick street in memory and then determine when the crossing happened. First I will search for \"brick street\" to identify relevant views. The visual context can establish what the location looks like before I inspect the timing of the transition onto it.",
+      "contextNodeIds": []
+    },
+    {
+      "caseId": "08",
+      "nodeId": "crossing_verification",
+      "text": "Node 02 returns the approach to the brick surface around 10:00:00. I should check that transition through another time lookup before settling on a crossing interval. I will search 10:00:26 and compare the returned frame times and scene with the approach sequence already in context.",
+      "contextNodeIds": [
+        "brick_street_crossing_time"
+      ]
+    },
+    {
+      "caseId": "08",
+      "nodeId": "crossing_end_check",
+      "text": "The approach sequence in node 02 gives me a candidate transition to inspect further. I will open a second check from that node at 10:00:15, focusing on the later edge of the event. I need to see how the returned views relate to the brick surface after the approach.",
+      "contextNodeIds": [
+        "brick_street_crossing_time"
+      ]
+    },
+    {
+      "caseId": "08",
+      "nodeId": "answer",
+      "text": "Node 02 captures the approach from concrete pavement toward the brick surface, and node 03 returns an overlapping view of the crossing. I will bring these two nodes together for the answer and report the crossing between 09:59:58 and 10:00:04. Their returned frame times are the basis for this interval.",
+      "contextNodeIds": [
+        "brick_street_crossing_time",
+        "crossing_verification"
+      ]
+    },
+    {
+      "caseId": "01",
+      "nodeId": "exit_building_text",
+      "text": "I need to find the transition from being inside the building to being outside. I will begin with a search for \"exit building\" to locate relevant event views. Once I have that context, I can inspect the timing and look for the boundary between indoor and outdoor frames.",
+      "contextNodeIds": []
+    },
+    {
+      "caseId": "01",
+      "nodeId": "start_time_probe",
+      "text": "The semantic search returns outdoor courtyard views without a clear exit boundary. I will open a separate time branch at 15:36:32 to inspect the beginning of the experience. I need a sequence containing an indoor view followed by outdoor frames before I can place the transition.",
+      "contextNodeIds": [
+        "exit_building_text"
+      ]
+    },
+    {
+      "caseId": "01",
+      "nodeId": "exit_boundary_check",
+      "text": "Node 02 brackets the event: an indoor doorway view appears at 15:36:35, followed by courtyard views around 15:36:39. I should inspect a candidate within that interval. I will search 15:36:38 and compare the returned sequence with the indoor-to-outdoor transition already in context.",
+      "contextNodeIds": [
+        "start_time_probe"
+      ]
+    },
+    {
+      "caseId": "01",
+      "nodeId": "exact_exit_time",
+      "text": "Node 03 returns the same doorway-to-courtyard sequence, so the observed interval has not changed. I will check one second earlier, at 15:36:37, to inspect the candidate boundary again. I need to compare the returned views carefully before assigning a more precise exit time.",
+      "contextNodeIds": [
+        "exit_boundary_check"
+      ]
+    },
+    {
+      "caseId": "01",
+      "nodeId": "exit_transition_check",
+      "text": "Node 04 still points to the same doorway and courtyard event. I will step back to 15:36:36 and inspect the transition through another lookup. The existing indoor-to-outdoor sequence remains my anchor; I want to see whether this query provides a clearer view of where the change occurs.",
+      "contextNodeIds": [
+        "exact_exit_time"
+      ]
+    },
+    {
+      "caseId": "01",
+      "nodeId": "transition_frame_153638",
+      "text": "Node 05 contains indoor views through 15:36:38 and outdoor courtyard views beginning around 15:36:39. I will branch from that check and revisit 15:36:38 as a boundary candidate. The next lookup lets me inspect that candidate against the transition in the returned sequence.",
+      "contextNodeIds": [
+        "exit_transition_check"
+      ]
+    },
+    {
+      "caseId": "01",
+      "nodeId": "frame_153637",
+      "text": "I will open the companion check at 15:36:37 from node 05. This examines an earlier candidate within the same doorway-to-courtyard interval. I need to compare the returned indoor views with the first outdoor views and check how the proposed exit time fits that sequence.",
+      "contextNodeIds": [
+        "exit_transition_check"
+      ]
+    },
+    {
+      "caseId": "01",
+      "nodeId": "answer",
+      "text": "Node 02 establishes the indoor-to-outdoor interval, while nodes 06 and 07 revisit the same doorway-to-courtyard clip. In this replay, I bring those nodes together as repeated checks of one sequence. I will report the exit around 15:36:38, with the courtyard visible by 15:36:39, while keeping that shared evidence basis in view.",
+      "contextNodeIds": [
+        "start_time_probe",
+        "transition_frame_153638",
+        "frame_153637"
+      ]
+    }
+  ]
+}

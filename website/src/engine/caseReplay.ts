@@ -1,5 +1,6 @@
 import type { CaseNode, ResearchCase } from "../data/caseTypes";
 import recordedThinking from "../data/recordedThinking.json";
+import adaptedThinking from "../data/adaptedThinking.json";
 
 export type ReplayEventKind = "thinking" | "tool" | "context" | "answer";
 
@@ -10,9 +11,9 @@ export interface ReplayEvent {
   label: string;
   text: string;
   durationMs: number;
-  provenance: "recorded" | "summary";
+  provenance: "recorded" | "summary" | "adapted";
   original?: (typeof recordedThinking.records)[number];
-  excerpt?: boolean;
+  contextNodeIds?: string[];
 }
 
 export interface ReplayContextEntry {
@@ -77,25 +78,21 @@ function event(record: ResearchCase, node: CaseNode, kind: ReplayEventKind, text
 
 function thinkingEvent(record: ResearchCase, node: CaseNode): ReplayEvent {
   const original = recordedThinking.records.find(item => item.caseId === record.id && item.nodeId === node.id);
-  if (!original) return event(record, node, "thinking", node.displayTrace?.intent ?? node.label);
-  let text = original.text;
-  if (text.length > 760) {
-    const paragraph = text.lastIndexOf("\n\n", 760);
-    const sentence = text.lastIndexOf(". ", 760);
-    const boundary = Math.max(paragraph > 320 ? paragraph : 0, sentence > 320 ? sentence + 1 : 0);
-    text = text.slice(0, boundary || text.lastIndexOf(" ", 760)).trimEnd();
-  }
-  return { ...event(record, node, "thinking", text), label: "Thinking", provenance: "recorded", original,
-    excerpt: text.length < original.text.length, durationMs: Math.max(2800, text.length * 25 + 900) };
+  const adapted = adaptedThinking.records.find(item => item.caseId === record.id && item.nodeId === node.id);
+  if (!original && !adapted) return event(record, node, "thinking", node.displayTrace?.intent ?? node.label);
+  const text = original?.text ?? adapted!.text;
+  return { ...event(record, node, "thinking", text), label: "Think", provenance: original ? "recorded" : "adapted",
+    original, contextNodeIds: adapted?.contextNodeIds,
+    durationMs: Math.max(2800, text.length * 18 + 900) };
 }
 
-/** Saved assistant prose where available; missing reasoning stays an explicitly labelled summary. */
+/** Full saved prose, with explicitly adapted passages for the remaining recorded searches. */
 export function buildCaseReplay(record: ResearchCase): ReplayEvent[] {
   const events: ReplayEvent[] = [];
   for (const node of [...record.nodes].sort((a, b) => a.order - b.order)) {
     if (node.kind === "question") continue;
     if (node.kind === "answer") {
-      if (recordedThinking.records.some(item => item.caseId === record.id && item.nodeId === node.id)) {
+      if ([...recordedThinking.records, ...adaptedThinking.records].some(item => item.caseId === record.id && item.nodeId === node.id)) {
         events.push(thinkingEvent(record, node));
       }
       events.push(event(record, node, "answer", record.answer));

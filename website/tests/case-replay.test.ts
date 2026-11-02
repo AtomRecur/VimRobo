@@ -5,13 +5,14 @@ import type { ResearchCase } from "../src/data/caseTypes.ts";
 import { buildCaseReplay, getDisplayEdges, getNodeNumber, getReplayState } from "../src/engine/caseReplay.ts";
 
 const originals = JSON.parse(readFileSync("src/data/recordedThinking.json", "utf8")).records as {caseId:string;nodeId:string;text:string}[];
+const adapted = JSON.parse(readFileSync("src/data/adaptedThinking.json", "utf8")).records as {caseId:string;nodeId:string;text:string;contextNodeIds:string[]}[];
 const records = JSON.parse(readFileSync("src/data/researchCases.json", "utf8")).cases as ResearchCase[];
 
-test("replay uses recorded objectives, findings, queries and the actual search functions", () => {
+test("replay keeps full original think passages, adapted intent, findings and actual search functions", () => {
   for (const record of records) {
     const events = buildCaseReplay(record);
     const retrievals = record.nodes.filter(node => !["question", "answer"].includes(node.kind));
-    assert.equal(events.length, retrievals.length * 3 + 1 + Number(originals.some(item => item.caseId === record.id && item.nodeId === "answer")));
+    assert.equal(events.length, retrievals.length * 3 + 2);
     assert.equal(new Set(events.map(item => item.id)).size, events.length);
     for (const node of retrievals) {
       const steps = events.filter(item => item.nodeId === node.id);
@@ -19,13 +20,13 @@ test("replay uses recorded objectives, findings, queries and the actual search f
       const original = originals.find(item => item.caseId === record.id && item.nodeId === node.id);
       if (original) {
         assert.equal(steps[0].original?.text, original.text);
-        assert.ok(original.text.startsWith(steps[0].text), "excerpts must be an unchanged source prefix");
-        assert.equal(steps[0].label, "Thinking");
+        assert.equal(steps[0].text, original.text, "the complete original must play inline without truncation");
+        assert.equal(steps[0].label, "Think");
         assert.equal(steps[0].provenance, "recorded");
       } else {
-        assert.equal(steps[0].text, node.displayTrace!.intent);
-        assert.equal(steps[0].label, "Search intent");
-        assert.equal(steps[0].provenance, "summary");
+        assert.equal(steps[0].text, adapted.find(item => item.caseId === record.id && item.nodeId === node.id)!.text);
+        assert.equal(steps[0].label, "Think");
+        assert.equal(steps[0].provenance, "adapted");
         assert.equal(steps[0].original, undefined);
       }
       assert.equal(steps[2].text, node.displayTrace!.finding);
@@ -115,16 +116,42 @@ test("last case presents 02, 06 and 07 converging on Answer while retaining the 
 });
 
 
-test("only saved prose is labelled Thinking and answer reasoning does not reveal the answer early", () => {
+test("original and adapted think remain distinct and answer synthesis does not reveal the answer node early", () => {
   const all = records.flatMap(buildCaseReplay);
-  const thinking = all.filter(item => item.label === "Thinking");
-  assert.equal(thinking.length, 3);
-  assert.ok(thinking.every(item => item.provenance === "recorded" && item.original));
-  for (const id of ["13", "01"]) assert.ok(!buildCaseReplay(records.find(item => item.id === id)!).some(item => item.label === "Thinking"));
-  const record = records.find(item => item.id === "04")!;
-  const events = buildCaseReplay(record);
-  const index = events.findIndex(item => item.nodeId === "answer" && item.kind === "thinking");
-  assert.ok(index > 0);
-  assert.equal(getReplayState(record, events, index, 1).visibleNodeIds.includes("answer"), false);
-  assert.equal(getReplayState(record, events, index + 1, 0).visibleNodeIds.includes("answer"), true);
+  const thinking = all.filter(item => item.kind === "thinking");
+  assert.equal(thinking.length, 22);
+  assert.ok(thinking.every(item => item.label === "Think"));
+  assert.equal(thinking.filter(item => item.provenance === "recorded").length, 3);
+  assert.equal(thinking.filter(item => item.provenance === "adapted").length, 19);
+  for (const item of thinking) {
+    if (item.original) {
+      assert.equal(item.provenance, "recorded");
+      assert.equal(item.text, item.original.text);
+    } else assert.equal(item.provenance, "adapted");
+  }
+  for (const record of records) {
+    const events = buildCaseReplay(record);
+    const index = events.findIndex(item => item.nodeId === "answer" && item.kind === "thinking");
+    assert.ok(index > 0);
+    assert.equal(getReplayState(record, events, index, 1).visibleNodeIds.includes("answer"), false);
+    assert.equal(getReplayState(record, events, index + 1, 0).visibleNodeIds.includes("answer"), true);
+  }
+});
+
+test("adapted think only uses context already retrieved and leaves original source records intact", () => {
+  assert.equal(new Set(adapted.map(item => `${item.caseId}:${item.nodeId}`)).size, adapted.length);
+  for (const passage of adapted) {
+    const record = records.find(item => item.id === passage.caseId)!;
+    const node = record.nodes.find(item => item.id === passage.nodeId)!;
+    assert.ok(record && node);
+    assert.ok(!originals.some(item => item.caseId === record.id && item.nodeId === node.id));
+    const events = buildCaseReplay(record);
+    const index = events.findIndex(item => item.nodeId === node.id && item.kind === "thinking");
+    const state = getReplayState(record, events, index, 0);
+    for (const id of passage.contextNodeIds) {
+      const context = record.nodes.find(item => item.id === id)!;
+      assert.ok(context && context.order < node.order);
+      assert.ok(state.contextEntries.some(item => item.nodeId === id), `${record.id}/${node.id} uses future context ${id}`);
+    }
+  }
 });

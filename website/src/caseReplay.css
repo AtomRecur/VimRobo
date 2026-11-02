@@ -122,8 +122,6 @@
 .replay-provenance { padding:3px 6px; border:1px solid #8ca9bc29; border-radius:4px; color:#879eae; font:9px var(--mono); letter-spacing:0; }
 .replay-provenance.recorded { color:#addbc8; border-color:#8fceba4d; background:#8fceba09; }
 .replay-provenance.recorded:hover { color:#d1f4e6; border-color:#b8e4d2; }
-.replay-read-original { display:flex; align-items:center; gap:8px; margin-top:12px; color:#9bcec0; font-size:11px; padding-block:4px; }
-.replay-read-original:hover { color:#d1f2e6; }
 .replay-log-start p { max-width:360px; line-height:1.6; }
 .replay-original-dialog { width:min(720px,calc(100% - 32px)); max-height:85svh; padding:36px; border:1px solid #86b3bd55; border-radius:18px; background:#10212c; color:#d4e4e9; box-shadow:0 32px 110px #0008; overflow:auto; }
 .replay-original-dialog::backdrop { background:#030b12b8; backdrop-filter:blur(9px); }
