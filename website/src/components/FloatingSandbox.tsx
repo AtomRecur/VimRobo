@@ -242,6 +242,8 @@ function SceneContent({ scenario, state, expanded, layers, overlays, reduced, as
   },[overview,scene,scenario.nodes]);
   const spread=useRef(expanded?1:0);
   const published=useRef("");
+  const invalidate=useThree(state=>state.invalidate);
+  useEffect(()=>{if(reduced)invalidate();},[expanded,reduced,invalidate]);
   // Drive the physical planes and the framework cards from the same frame.
   useFrame((_,dt)=>{
     const target=expanded?1:0;
@@ -275,7 +277,7 @@ function FirstFrame({ onReady }: { onReady?: () => void }) {
 export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,onSelect,overview=false,onReady}: {onReady?:()=>void;overview?:boolean; scenario:Scenario; state:ReasoningState; hero?:boolean; visible?:boolean; resetKey?:number; onSelect?:(o:Observation)=>void}) {
   const reduced=useReducedMotion();
   const [expanded,setExpanded]=useState(true);
-  const [layers,setLayers]=useState<Layers>([true,true,true]);
+  const layers:Layers=[true,true,true];
   const [cameraReset,setCameraReset]=useState(0);
   const [assets,setAssets]=useState<SceneAssets|null>(()=>overview?createSceneShell():null);
   const [loadFailed,setLoadFailed]=useState(false);
@@ -328,7 +330,7 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
     return()=>document.removeEventListener("visibilitychange",update);
   },[]);
   useEffect(()=>{
-    if(reduced){setExpanded(true);return;}
+    if(reduced)return;
     if(!visible||!pageVisible||dragging||frameworkHovered||frameworkFocused||!scene)return;
     const timer=window.setTimeout(()=>setExpanded(value=>!value),expanded?4000:3000);
     return()=>window.clearTimeout(timer);
@@ -346,8 +348,8 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
       {assets && <><SceneContent scenario={scenario} state={state} expanded={expanded} layers={layers} overlays={overlays} reduced={reduced} assets={assets} overview={overview} dockRef={dockRef}/><FirstFrame onReady={onReady}/></>}
       <CameraRig resetKey={resetKey+cameraReset} reduced={reduced} overview={overview} onDrag={value=>{setDragging(value);if(value)setDetailRequested(true);}}/>
     </Canvas>
-    <FrameworkDock dockRef={dockRef} layers={layers} animate={visible&&pageVisible&&!reduced} onHover={setFrameworkHovered} onFocus={setFrameworkFocused}
-      onToggle={index=>setLayers(values=>values.map((show,i)=>i===index?!show:show) as Layers)}/>
+    <FrameworkDock dockRef={dockRef} expanded={expanded} animate={visible&&pageVisible&&!reduced} onHover={setFrameworkHovered} onFocus={setFrameworkFocused}
+      onToggle={()=>setExpanded(value=>!value)}/>
     <div className="reasoning-labels" aria-label="Spatial reasoning nodes">
       {layers[2] && state.visibleGraphNodes.map((node)=>{
         const observation=scenario.observations.find(o=>o.id===node.observationId);

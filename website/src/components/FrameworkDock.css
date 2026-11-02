@@ -16,6 +16,12 @@
   pointer-events:none;
   isolation:isolate;
 }
+.framework-control { position:absolute; inset:0; padding:0; border:0; background:none; text-align:left; pointer-events:none; }
+.framework-control:focus-visible { outline:none; }
+.framework-control[aria-expanded="false"] .framework-shell { pointer-events:auto; }
+.framework-control[aria-expanded="false"]:hover .framework-shell { border-color:#a9d8dd; }
+.framework-control[aria-expanded="false"]:focus-visible .framework-shell { outline:2px solid #a9d8dd; outline-offset:4px; }
+.framework-control[aria-expanded="true"]:focus-visible .framework-module { outline:2px solid var(--layer-color); outline-offset:4px; }
 .framework-shell {
   position:absolute;
   left:0;
@@ -77,8 +83,6 @@
   transition:background .2s,border-color .2s,opacity .2s;
 }
 .framework-module:hover { border-color:var(--layer-color); background:#1b3343ed; }
-.framework-module[aria-pressed="false"] { opacity:.4; }
-.framework-module:focus-visible { outline:2px solid var(--layer-color); outline-offset:4px; }
 .framework-number {
   position:absolute;
   left:12px;
