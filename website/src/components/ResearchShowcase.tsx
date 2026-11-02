@@ -6,6 +6,7 @@ import { buildCaseReplay, getDisplayEdges, getNodeNumber, getReplayState } from 
 import type { ReplayEvent } from "../engine/caseReplay";
 import { layoutReplayGraph, replayEdgePath } from "../engine/caseGraph";
 import { useReducedMotion, useVisibility } from "../hooks";
+import EvidenceFilmstrip from "./EvidenceFilmstrip";
 import "../caseReplay.css";
 
 const cases = records.cases as ResearchCase[];
@@ -60,7 +61,7 @@ function CaseReplay({ record }: { record: ResearchCase }) {
   const [playing, setPlaying] = useState(!reduced);
   const [pageVisible, setPageVisible] = useState(!document.hidden);
   const [following, setFollowing] = useState(true);
-  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(true);
   const [originalEvent, setOriginalEvent] = useState<ReplayEvent | null>(null);
   const originalDialog = useRef<HTMLDialogElement>(null);
   const log = useRef<HTMLDivElement>(null);
@@ -146,7 +147,10 @@ function CaseReplay({ record }: { record: ResearchCase }) {
       <button className="replay-original-close" aria-label="Close original reasoning" onClick={()=>originalDialog.current?.close()}><X size={19}/></button>
       {originalEvent?.original&&<><div className="replay-original-kicker">CASE {record.id} / ORIGINAL ASSISTANT TEXT</div><h3 id={`original-title-${record.id}`}>{record.nodes.find(node=>node.id===originalEvent.nodeId)?.label}</h3><p className="replay-original-location">{originalEvent.original.sourceFile} · trajs[{originalEvent.original.trajectoryIndex}][{originalEvent.original.messageIndex}].content</p><div className="replay-original-text">{originalEvent.original.text}</div></>}
     </dialog>
-    <details className="replay-source" onToggle={e=>setArchiveOpen(e.currentTarget.open)}><summary>About this replay <ChevronRight size={14}/></summary><div><p>Original passages are shown in full. Adapted passages follow the recorded searches and the displayed graph. Tool calls and context updates remain tied to the retrieved evidence.</p>{adapted&&<p>The display connects nodes 02, 06 and 07 to the answer. The recorded answer cites node 02; nodes 06 and 07 revisit the same clip and are shown as additional synthesis connections.</p>}<p>{record.sourceNote} {record.quality.note}</p>{archiveOpen&&<div className="replay-evidence-archive">{record.nodes.filter(node=>node.previewEvidenceId).map(node=>{const frame=record.evidence.find(item=>item.id===node.previewEvidenceId);return frame?<figure key={node.id}><img src={frame.image} alt={`${node.label}: ${frame.timestamp}`} loading="lazy"/><figcaption>{getNodeNumber(record,node.id)} · {frame.timestamp}</figcaption></figure>:null;})}</div>}</div></details>
+    <details className="replay-source" open={archiveOpen} onToggle={e=>setArchiveOpen(e.currentTarget.open)}><summary>About this replay <ChevronRight size={14}/></summary><div>
+      {archiveOpen&&<EvidenceFilmstrip record={record}/>}
+      <div className="replay-source-notes"><p>Original passages are shown in full. Adapted passages follow the recorded searches and the displayed graph. Tool calls and context updates remain tied to the retrieved evidence.</p>{adapted&&<p>The display connects nodes 02, 06 and 07 to the answer. The recorded answer cites node 02; nodes 06 and 07 revisit the same clip and are shown as additional synthesis connections.</p>}<p>{record.sourceNote} {record.quality.note}</p></div>
+    </div></details>
   </article>;
 }
 

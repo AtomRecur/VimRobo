@@ -95,16 +95,13 @@
 .replay-answer > span { color:#b3e8cb; margin-top:2px; }
 .replay-answer small { color:#95c4ad; font:9px var(--mono); letter-spacing:1.3px; }
 .replay-answer p { margin-top:7px; font-size:16px; line-height:1.7; color:#d5ebdf; }
-.replay-source { border-top:1px solid #9bb7be17; padding:0 28px; }
-.replay-source summary { display:flex; align-items:center; gap:8px; padding:15px 0; color:#7f9ca9; font-size:11px; list-style:none; cursor:pointer; }
+.replay-source { border-top:1px solid #9bb7be17; }
+.replay-source summary { display:flex; align-items:center; gap:8px; padding:18px 28px; color:#9ab9c3; font-size:12px; list-style:none; cursor:pointer; }
 .replay-source summary::-webkit-details-marker { display:none; }
 .replay-source[open] summary svg { transform:rotate(90deg); }
-.replay-source > div { padding-bottom:20px; }
+.replay-source > div { padding-bottom:18px; }
+.replay-source-notes { padding:14px 28px 0; }
 .replay-source p { font-size:12px; line-height:1.8; color:#98b4bf; margin-bottom:10px; max-width:1000px; }
-.replay-evidence-archive { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-top:20px; }
-.replay-evidence-archive figure { margin:0; }
-.replay-evidence-archive img { width:100%; aspect-ratio:1.5; object-fit:cover; border-radius:5px; }
-.replay-evidence-archive figcaption { font:10px var(--mono); padding:6px 0; color:#86a3b1; }
 .replay-accessible-status { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .replay-cases :is(button,input,summary,[tabindex]):focus-visible { outline:2px solid #b3e9d9; outline-offset:4px; }
 @keyframes replay-caret { 50% { opacity:0; } }
@@ -132,3 +129,4 @@
 .replay-original-location { font:10px/1.6 var(--mono); color:#7e9cae; margin:12px 0 24px; overflow-wrap:anywhere; }
 .replay-original-text { white-space:pre-wrap; overflow-wrap:anywhere; font:14px/1.85 var(--sans); color:#c6dce3; }
 @media(max-width:520px) { .replay-original-dialog { padding:30px 22px; } .replay-original-dialog h3 { font-size:22px; } .replay-entry-label { gap:6px; } }
+@media(max-width:520px) { .replay-source summary { padding-inline:20px; } .replay-source-notes { padding-inline:20px; } }

@@ -1,0 +1,152 @@
+{
+  "cases": [
+    {
+      "caseId": "13",
+      "frames": [
+        {
+          "evidenceId": "6-1674765315.054173",
+          "description": "Person beside the open doorway"
+        },
+        {
+          "evidenceId": "6-1674765317.053573",
+          "description": "Full view of the person outside"
+        },
+        {
+          "evidenceId": "6-1674765318.053727",
+          "description": "Person standing outside the door"
+        },
+        {
+          "evidenceId": "6-1674765319.054365",
+          "description": "White shoes beside the doorway"
+        },
+        {
+          "evidenceId": "6-1674765321.05241",
+          "description": "Sunlit paving beyond the doors"
+        },
+        {
+          "evidenceId": "6-1674765325.052212",
+          "description": "Brick path beside outdoor tables"
+        },
+        {
+          "evidenceId": "6-1674765328.056774",
+          "description": "Pedestrian beside the brick path"
+        },
+        {
+          "evidenceId": "6-1674765333.052494",
+          "description": "Tree shadows across the walkway"
+        }
+      ]
+    },
+    {
+      "caseId": "04",
+      "frames": [
+        {
+          "evidenceId": "21-1676052351.048622",
+          "description": "Tree canopy above the walkway"
+        },
+        {
+          "evidenceId": "21-1676052357.049292",
+          "description": "Bench beside the shaded walkway"
+        },
+        {
+          "evidenceId": "21-1676052367.050186",
+          "description": "Bicycles beside the nearby bench"
+        },
+        {
+          "evidenceId": "21-1676052369.050376",
+          "description": "Stairs beside the campus walkway"
+        },
+        {
+          "evidenceId": "21-1676052372.050612",
+          "description": "Pedestrian passing the stairway"
+        },
+        {
+          "evidenceId": "21-1676052378.051262",
+          "description": "Brick paving beside the stairway"
+        },
+        {
+          "evidenceId": "21-1676052399.053568",
+          "description": "Bench and scooter beside the path"
+        },
+        {
+          "evidenceId": "21-1676052404.053996",
+          "description": "Bicycles and benches along the path"
+        }
+      ]
+    },
+    {
+      "caseId": "08",
+      "frames": [
+        {
+          "evidenceId": "0-1673884795.048098",
+          "description": "Concrete approach to the crossing"
+        },
+        {
+          "evidenceId": "0-1673884798.048236",
+          "description": "Paving change ahead of the path"
+        },
+        {
+          "evidenceId": "0-1673884801.048492",
+          "description": "Brick paving beyond the pavement"
+        },
+        {
+          "evidenceId": "0-1673884804.048887",
+          "description": "Pedestrian entering from the right"
+        },
+        {
+          "evidenceId": "0-1673884805.048972",
+          "description": "Pedestrian crossing the brick plaza"
+        },
+        {
+          "evidenceId": "0-1673884809.04957",
+          "description": "Brick pattern across the open plaza"
+        },
+        {
+          "evidenceId": "0-1673884812.049845",
+          "description": "Brick paving beside the lamp post"
+        },
+        {
+          "evidenceId": "0-1673884826.051396",
+          "description": "Brick path under the tree canopy"
+        }
+      ]
+    },
+    {
+      "caseId": "01",
+      "frames": [
+        {
+          "evidenceId": "22-1676064995.067459",
+          "description": "Indoor approach to glass doors"
+        },
+        {
+          "evidenceId": "22-1676064997.063075",
+          "description": "Sunlight through the glass doors"
+        },
+        {
+          "evidenceId": "22-1676064998.063416",
+          "description": "Closer view of the glass doors"
+        },
+        {
+          "evidenceId": "22-1676064999.06452",
+          "description": "Long shadows at the threshold"
+        },
+        {
+          "evidenceId": "22-1676065000.066583",
+          "description": "Open doorway to the courtyard"
+        },
+        {
+          "evidenceId": "22-1676065001.062872",
+          "description": "Brick courtyard beyond the door"
+        },
+        {
+          "evidenceId": "22-1676065008.063739",
+          "description": "Sunlit paving beside the building"
+        },
+        {
+          "evidenceId": "22-1676065013.065227",
+          "description": "Brick path along the building"
+        }
+      ]
+    }
+  ]
+}
