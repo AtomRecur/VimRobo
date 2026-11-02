@@ -149,7 +149,6 @@ function CaseReplay({ record }: { record: ResearchCase }) {
     </dialog>
     <details className="replay-source" open={archiveOpen} onToggle={e=>setArchiveOpen(e.currentTarget.open)}><summary>About this replay <ChevronRight size={14}/></summary><div>
       {archiveOpen&&<EvidenceFilmstrip record={record}/>}
-      <div className="replay-source-notes"><p>Original passages are shown in full. Adapted passages follow the recorded searches and the displayed graph. Tool calls and context updates remain tied to the retrieved evidence.</p>{adapted&&<p>The display connects nodes 02, 06 and 07 to the answer. The recorded answer cites node 02; nodes 06 and 07 revisit the same clip and are shown as additional synthesis connections.</p>}<p>{record.sourceNote} {record.quality.note}</p></div>
     </div></details>
   </article>;
 }
