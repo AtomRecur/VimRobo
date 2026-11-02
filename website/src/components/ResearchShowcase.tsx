@@ -61,7 +61,6 @@ function CaseReplay({ record }: { record: ResearchCase }) {
   const [playing, setPlaying] = useState(!reduced);
   const [pageVisible, setPageVisible] = useState(!document.hidden);
   const [following, setFollowing] = useState(true);
-  const [archiveOpen, setArchiveOpen] = useState(true);
   const [originalEvent, setOriginalEvent] = useState<ReplayEvent | null>(null);
   const originalDialog = useRef<HTMLDialogElement>(null);
   const log = useRef<HTMLDivElement>(null);
@@ -147,9 +146,7 @@ function CaseReplay({ record }: { record: ResearchCase }) {
       <button className="replay-original-close" aria-label="Close original reasoning" onClick={()=>originalDialog.current?.close()}><X size={19}/></button>
       {originalEvent?.original&&<><div className="replay-original-kicker">CASE {record.id} / ORIGINAL ASSISTANT TEXT</div><h3 id={`original-title-${record.id}`}>{record.nodes.find(node=>node.id===originalEvent.nodeId)?.label}</h3><p className="replay-original-location">{originalEvent.original.sourceFile} · trajs[{originalEvent.original.trajectoryIndex}][{originalEvent.original.messageIndex}].content</p><div className="replay-original-text">{originalEvent.original.text}</div></>}
     </dialog>
-    <details className="replay-source" open={archiveOpen} onToggle={e=>setArchiveOpen(e.currentTarget.open)}><summary>About this replay <ChevronRight size={14}/></summary><div>
-      {archiveOpen&&<EvidenceFilmstrip record={record}/>}
-    </div></details>
+    <div className="replay-source"><EvidenceFilmstrip record={record}/></div>
   </article>;
 }
 
