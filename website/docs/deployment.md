@@ -28,8 +28,8 @@ The site requires no backend or runtime credentials. Configure resource links in
 
 ## Scene loading
 
-A 70 KB recorded preview appears first. The interactive scene loads about 543 KB of compressed geometry and texture in parallel, then adds a 400,000-point environment, an 80,000-point scan, and a 2K texture in the background. On desktop, orbiting requests the original 1.2-million-point environment and a 4K texture after interaction settles. Mobile rendering caps point count and pixel ratio. Save-data connections retain the lightweight view.
+The original three-dimensional layer framework renders as soon as its preloaded runtime is ready; no opening photograph is shown. About 543 KB of compressed geometry and texture loads in parallel, filling each layer independently. A 400,000-point environment, an 80,000-point scan, and a 2K texture then arrive in the background. On desktop, orbiting requests the original 1.2-million-point environment and a 4K texture after interaction settles. Mobile rendering caps point count and pixel ratio. Save-data connections retain the lightweight view.
 
-The overview evidence markers are illustrative and do not open image dialogs. Case code and images load only when the visitor scrolls toward the cases. Detail download failures preserve the loaded scene; initial failures preserve the recorded preview and offer retry. Previous hashed JavaScript chunks remain published for cached pages and open tabs.
+The overview evidence markers are illustrative and do not open image dialogs. Case code and images load only when the visitor scrolls toward the cases. Individual asset failures preserve the layer framework and any loaded geometry, with retry available for initial detail failures. Previous hashed JavaScript chunks remain published for cached pages and open tabs.
 
 `website/scripts/optimize_scene.py` regenerates the compressed assets from the retained measurements. RGB bytes are preserved exactly; quantized coordinates have a maximum display-space error of 0.000138. `pnpm test` checks the decoder against original recorded points.

@@ -7,6 +7,18 @@ import { decodePointCloud } from "../src/engine/pointCloud.ts";
 const directory = "public/capture-dense/optimized-v1/";
 const manifest = JSON.parse(readFileSync(directory + "manifest.json", "utf8"));
 
+test("the immediate 3D framework uses the recorded footprint, evidence anchors, and route endpoints", () => {
+  const shell = JSON.parse(readFileSync("src/data/sceneShell.json", "utf8"));
+  const original = JSON.parse(readFileSync("public/capture-dense/scene.json", "utf8"));
+  assert.deepEqual(shell.extentMeters, original.extentMeters);
+  assert.deepEqual(shell.frames.map((frame: any) => frame.frameIndex), [0, 1566, 4700, 7833, 9400, 12534]);
+  for (const frame of shell.frames) assert.deepEqual(frame.position, original.frames.find((source: any) => source.frameIndex === frame.frameIndex).position);
+  for (const index of [0, -1]) {
+    const expected = original.route.at(index);
+    shell.route.at(index).forEach((value: number, axis: number) => assert.ok(Math.abs(value - expected[axis]) < .00001));
+  }
+});
+
 test("the preview stays small while the full desktop cloud retains every recorded surface point", () => {
   const previewBytes = manifest.environment.preview.bytes + manifest.scan.preview.bytes + readFileSync(directory + manifest.map.preview).length;
   assert.ok(previewBytes < 550_000);

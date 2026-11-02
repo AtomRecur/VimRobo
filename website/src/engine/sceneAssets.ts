@@ -1,16 +1,23 @@
 import type { LayerScene } from "../data/layerScene";
 import { decodePointCloud } from "./pointCloud";
 import type { PointCloud } from "./pointCloud";
+import shell from "../data/sceneShell.json";
 
 export interface SceneAssets {
   scene: LayerScene;
   environment?: PointCloud;
   scan: PointCloud;
-  map: HTMLImageElement;
+  map: HTMLImageElement | null;
   pointSize: number;
 }
 
 const optimized = "capture-dense/optimized-v1/";
+const shellScene: LayerScene = {
+  ...shell,
+  extentMeters: [shell.extentMeters[0], shell.extentMeters[1]],
+  frames: shell.frames.map(frame => ({ ...frame, position: [frame.position[0], frame.position[1], frame.position[2]] })),
+  route: shell.route.map(([x, y, z]): [number, number, number] => [x, y, z]),
+};
 const cache = new Map<string, Promise<unknown>>();
 export const sceneAssetURL = (path: string) => new URL(path, document.baseURI).href;
 
@@ -28,7 +35,7 @@ async function bytes(path: string, priority: RequestPriority = "high") {
   let failure: unknown;
   for (let attempt = 0; attempt < 3; attempt++) {
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), priority === "high" ? 30_000 : 180_000);
+    const timeout = window.setTimeout(() => controller.abort(), priority === "low" ? 180_000 : 30_000);
     try {
       const response = await fetch(url, { signal: controller.signal, priority, cache: attempt ? "reload" : "default" });
       if (!response.ok) throw new Error(`Scene asset ${response.status}: ${path}`);
@@ -41,7 +48,7 @@ async function bytes(path: string, priority: RequestPriority = "high") {
   throw failure;
 }
 
-function cloud(file: string, priority: RequestPriority = "high") {
+function cloud(file: string, priority: RequestPriority = "auto") {
   return cached(file, async () => {
     let buffer = await bytes(optimized + file, priority);
     const signature = new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 2));
@@ -58,7 +65,7 @@ function cloud(file: string, priority: RequestPriority = "high") {
   });
 }
 
-function mapImage(path: string, priority: RequestPriority = "high") {
+function mapImage(path: string, priority: RequestPriority = "auto") {
   return cached(path, async () => {
     const data = await bytes(path, priority);
     const url = URL.createObjectURL(new Blob([data], { type: "image/webp" }));
@@ -69,23 +76,34 @@ function mapImage(path: string, priority: RequestPriority = "high") {
   });
 }
 
+export function createSceneShell(): SceneAssets {
+  return { scene: shellScene, scan: { positions: new Float32Array(0), pointCount: 0 }, map: null, pointSize: .044 };
+}
+
+/** Reveal the real layers independently; one late file never hides the rest. */
+export function loadPreviewParts(overview: boolean, apply: (patch: Partial<SceneAssets>) => void) {
+  if (!overview) return loadScenePreview(false).then(apply);
+  return Promise.all([
+    cloud("environment-preview.vpc.gz").then(environment => apply({ environment })),
+    cloud("scan-preview.vpc.gz").then(scan => apply({ scan })),
+    mapImage(optimized + "map-preview.webp").then(map => apply({ map })),
+  ]);
+}
+
 /** All small first-view assets start together, before the Three.js chunk arrives. */
 export function loadScenePreview(overview = true): Promise<SceneAssets> {
   return cached(`preview:${overview}`, async () => {
-    const asset = overview ? "capture-dense/" : "capture/";
-    const metadata = bytes(asset + "scene.json").then(data => JSON.parse(new TextDecoder().decode(data)) as LayerScene);
     if (!overview) {
-      const scene = await metadata;
+      const scene = JSON.parse(new TextDecoder().decode(await bytes("capture/scene.json"))) as LayerScene;
       return { scene, scan: { positions: new Float32Array(scene.positions), pointCount: scene.pointCount },
-        map: await mapImage(asset + scene.baseMap), pointSize: .022 };
+        map: await mapImage("capture/" + scene.baseMap), pointSize: .022 };
     }
-    const [scene, environment, scan, map] = await Promise.all([
-      metadata,
+    const [environment, scan, map] = await Promise.all([
       cloud("environment-preview.vpc.gz"),
       cloud("scan-preview.vpc.gz"),
       mapImage(optimized + "map-preview.webp"),
     ]);
-    return { scene, environment, scan, map, pointSize: .044 };
+    return { ...createSceneShell(), environment, scan, map };
   });
 }
 

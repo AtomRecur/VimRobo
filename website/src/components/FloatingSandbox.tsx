@@ -9,7 +9,7 @@ import type { ReasoningState } from "../engine/reasoning";
 import { reasoningLayout } from "../data/layerScene";
 import type { LayerScene } from "../data/layerScene";
 import { useReducedMotion } from "../hooks";
-import { deviceProfile, loadScenePreview, loadEnvironmentDetail, loadScanDetail, loadMapDetail } from "../engine/sceneAssets";
+import { createSceneShell, deviceProfile, loadPreviewParts, loadEnvironmentDetail, loadScanDetail, loadMapDetail } from "../engine/sceneAssets";
 import type { SceneAssets } from "../engine/sceneAssets";
 import type { PointCloud } from "../engine/pointCloud";
 import FrameworkDock from "./FrameworkDock";
@@ -44,13 +44,14 @@ function Plate({ width, depth, color, grid = false }: { width: number; depth: nu
 
 function EnvironmentLayer({ scene, assets }: { scene: LayerScene; assets: SceneAssets }) {
   const map = useMemo(() => {
+    if (!assets.map) return null;
     const texture = new THREE.Texture(assets.map);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 4;
     texture.needsUpdate = true;
     return texture;
   }, [assets.map]);
-  useEffect(() => () => map.dispose(), [map]);
+  useEffect(() => () => map?.dispose(), [map]);
   return <group>
     <mesh position={[0,-0.085,0]}>
       <boxGeometry args={[scene.width+.06,.16,scene.depth+.06]} />
@@ -58,7 +59,7 @@ function EnvironmentLayer({ scene, assets }: { scene: LayerScene; assets: SceneA
     </mesh>
     <mesh rotation={[-Math.PI/2,0,0]} position={[0,.008,0]}>
       <planeGeometry args={[scene.width,scene.depth]} />
-      <meshBasicMaterial map={map} side={THREE.DoubleSide} transparent />
+      <meshBasicMaterial key={map?.uuid??"pending"} map={map} color={map?"#ffffff":"#122630"} side={THREE.DoubleSide} transparent />
     </mesh>
     <Plate width={scene.width} depth={scene.depth} color={PALETTE.environment} />
     {assets.environment && <RecordedSurfaces cloud={assets.environment} pointSize={assets.pointSize}/>}
@@ -119,7 +120,7 @@ function ScanLayer({ scene, cloud, reduced }: { scene: LayerScene; cloud: PointC
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(cloud.positions, 3));
-    g.computeBoundingSphere();
+    if (cloud.pointCount) g.computeBoundingSphere();
     return g;
   }, [cloud]);
   const material = useMemo(() => new THREE.ShaderMaterial({
@@ -135,7 +136,7 @@ function ScanLayer({ scene, cloud, reduced }: { scene: LayerScene; cloud: PointC
   });
   return <group>
     <Plate width={scene.width} depth={scene.depth} color={PALETTE.scan} grid />
-    <points geometry={geometry} material={material} />
+    {cloud.pointCount>0&&<points geometry={geometry} material={material} />}
     {!reduced && <mesh ref={sweep} position={[0,.72,0]}>
       <planeGeometry args={[scene.width,1.45]} />
       <meshBasicMaterial color="#76edec" transparent opacity={0.045} side={THREE.DoubleSide} depthWrite={false} blending={THREE.AdditiveBlending} />
@@ -266,10 +267,12 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
   const [expanded,setExpanded]=useState(true);
   const [layers,setLayers]=useState<Layers>([true,true,true]);
   const [cameraReset,setCameraReset]=useState(0);
-  const [assets,setAssets]=useState<SceneAssets|null>(null);
-  const [failure,setFailure]=useState<unknown>(null);
+  const [assets,setAssets]=useState<SceneAssets|null>(()=>overview?createSceneShell():null);
+  const [loadFailed,setLoadFailed]=useState(false);
+  const [loadAttempt,setLoadAttempt]=useState(0);
   const [profile]=useState(deviceProfile);
   const scene=assets?.scene??null;
+  const previewReady=!!assets?.map&&(assets?.environment?.pointCount??0)>=40000&&assets.scan.pointCount>=16000;
   const [lost,setLost]=useState(false);
   const [dragging,setDragging]=useState(false);
   const [detailRequested,setDetailRequested]=useState(false);
@@ -280,17 +283,19 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
   const overlays=useRef(new Map<string,HTMLButtonElement>()).current;
   useEffect(()=>{
     let active=true;
-    loadScenePreview(overview).then(value=>{if(active)setAssets(value);}).catch(error=>{if(active)setFailure(error);});
+    setLoadFailed(false);
+    loadPreviewParts(overview,patch=>{if(active)setAssets(current=>({...current,...patch} as SceneAssets));})
+      .catch(error=>{console.warn("VimRobo: scene details can be retried",error);if(active)setLoadFailed(true);});
     return()=>{active=false;};
-  },[overview]);
+  },[overview,loadAttempt]);
   useEffect(()=>{
-    if(!scene||!overview||!visible||!pageVisible||profile.saveData)return;
+    if(!previewReady||!scene||!overview||!visible||!pageVisible||profile.saveData)return;
     let active=true;
     const apply=(patch:Partial<SceneAssets>)=>{if(active)setAssets(current=>{
       if(!current)return current;
       if(patch.environment&&(current.environment?.pointCount??0)>patch.environment.pointCount)return current;
       if(patch.scan&&current.scan.pointCount>patch.scan.pointCount)return current;
-      if(patch.map&&current.map.width>patch.map.width)return current;
+      if(patch.map&&(current.map?.width??0)>patch.map.width)return current;
       return {...current,...patch};
     });};
     const keepPreview=(error:unknown)=>console.warn("VimRobo: keeping the loaded scene while detail is unavailable",error);
@@ -300,10 +305,10 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
       loadMapDetail(true).then(map=>apply({map})).catch(keepPreview);
     },2500);
     return()=>{active=false;window.clearTimeout(timer);};
-  },[scene,overview,visible,pageVisible,profile]);
+  },[previewReady,scene,overview,visible,pageVisible,profile]);
   useEffect(()=>{
     // Full desktop geometry is requested only after someone explores the map.
-    if(!scene||!overview||!detailRequested||dragging||!visible||!pageVisible||profile.saveData||profile.compact)return;
+    if(!previewReady||!scene||!overview||!detailRequested||dragging||!visible||!pageVisible||profile.saveData||profile.compact)return;
     let active=true;
     const timer=window.setTimeout(()=>{
       loadEnvironmentDetail(false).then(environment=>{if(active)setAssets(current=>current?{...current,environment,pointSize:.009}:current);}).catch(()=>{});
@@ -311,7 +316,7 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
       loadMapDetail(false).then(map=>{if(active)setAssets(current=>current?{...current,map}:current);}).catch(()=>{});
     },2500);
     return()=>{active=false;window.clearTimeout(timer);};
-  },[scene,overview,detailRequested,dragging,visible,pageVisible,profile]);
+  },[previewReady,scene,overview,detailRequested,dragging,visible,pageVisible,profile]);
   useEffect(()=>{
     const update=()=>setPageVisible(!document.hidden);
     document.addEventListener("visibilitychange",update);
@@ -323,9 +328,8 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
     const timer=window.setTimeout(()=>setExpanded(value=>!value),expanded?4000:3000);
     return()=>window.clearTimeout(timer);
   },[expanded,visible,pageVisible,reduced,dragging,frameworkHovered,frameworkFocused,scene]);
-  if(failure)throw failure;
   if(lost)throw new Error("WebGL context lost");
-  return <div className={`layered-world ${overview?"overview-world":""}`} data-environment-points={assets?.environment?.pointCount??0} data-scan-points={assets?.scan.pointCount??0} data-layout={expanded?"exploded":"aligned"} data-layers={layers.map(Number).join("")}>
+  return <div className={`layered-world ${overview?"overview-world":""}`} data-environment-points={assets?.environment?.pointCount??0} data-scan-points={assets?.scan.pointCount??0} data-map-width={assets?.map?.width??0} data-layout={expanded?"exploded":"aligned"} data-layers={layers.map(Number).join("")}>
     <Canvas
       aria-label="Three-layer environment, spatial scan, and reasoning sandbox"
       orthographic camera={{position:[11,10.5,15],zoom:36,near:.1,far:100}}
@@ -349,5 +353,6 @@ export default function FloatingSandbox({scenario,state,visible=true,resetKey=0,
       })}
     </div>
     <button className="camera-reset" aria-label="Reset camera view" title="Reset camera" onClick={()=>setCameraReset(v=>v+1)}><RotateCcw size={15}/></button>
+    {loadFailed&&<button className="scene-retry" onClick={()=>setLoadAttempt(value=>value+1)}><RotateCcw size={16}/>Retry details</button>}
   </div>;
 }

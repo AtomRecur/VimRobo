@@ -25,9 +25,6 @@ export default function SandboxView(props: React.ComponentProps<typeof Sandbox>)
     if (everVisible) void loadScenePreview(!!props.overview).catch(() => {});
   }, [everVisible, props.overview]);
   return <div className="sandbox-canvas" ref={ref} data-scene-status={status} aria-busy={status === "loading"}>
-    <picture className="scene-poster" aria-hidden={status === "ready"}>
-      <img src="capture-dense/optimized-v1/poster.webp" alt="Recorded three-dimensional environment, reconstructed from the full robot journey" fetchPriority="high" decoding="async" />
-    </picture>
     <div className="sandbox-live">
       <SceneBoundary onError={failed}>
         <Suspense fallback={null}>
