@@ -35,7 +35,7 @@ export const reasoningLayout: Record<string, [number, number, number]> = {
 };
 
 export const layerStyles = [
-  { id: "environment", number: "01", name: "Reality", detail: "RGB · MEASURED 3D", color: "#adc7df" },
-  { id: "scan", number: "02", name: "Spatial memory", detail: "OS1 · LIDAR CLOUD", color: "#7ddbd5" },
-  { id: "reasoning", number: "03", name: "Reasoning", detail: "RETRIEVE · REVISIT", color: "#ddc597" },
+  { id: "environment", number: "01", name: "Reality", detail: ["Observe the", "real world"], color: "#adc7df" },
+  { id: "scan", number: "02", name: "Memory", detail: ["Recall the", "scene context"], color: "#7ddbd5" },
+  { id: "reasoning", number: "03", name: "Reasoning", detail: ["Connect the", "key evidence"], color: "#ddc597" },
 ] as const;

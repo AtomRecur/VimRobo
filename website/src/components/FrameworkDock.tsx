@@ -32,7 +32,10 @@ export default function FrameworkDock({ dockRef, expanded, animate, onToggle, on
       return <span key={layer.id} className="framework-module" title={layer.name}
         style={{"--module-index":index,"--layer-color":layer.color} as CSSProperties}>
         <span className="framework-number">{layer.number}</span>
-        <strong className="framework-label">{layer.name}</strong>
+        <span className="framework-copy">
+          <strong className="framework-label">{layer.name}</strong>
+          <small className="framework-description"><span>{layer.detail[0]}</span>{" "}<span>{layer.detail[1]}</span></small>
+        </span>
         <Icon className="framework-glyph" size={18} aria-hidden="true"/>
         <span className="framework-status" aria-hidden="true"/>
       </span>;
