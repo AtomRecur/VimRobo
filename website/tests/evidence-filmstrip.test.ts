@@ -26,13 +26,14 @@ test("each filmstrip preserves node preview evidence within eight distinct chron
   }
 });
 
-test("every responsive filmstrip image is an available JPG below 100 KB", () => {
+test("responsive filmstrip JPGs fit their byte budgets and improve on the previous versions", () => {
   for (const strip of selection.cases) for (const frame of strip.frames) {
-    for (const prefix of ["public/cases/", "public/cases/filmstrip/"]) {
-      const bytes = readFileSync(`${prefix}${frame.evidenceId}.jpg`);
+    for (const [suffix, previous, budget] of [["", "filmstrip/", 24_000], ["-400", "", 34_000]] as const) {
+      const bytes = readFileSync(`public/cases/filmstrip-v2/${frame.evidenceId}${suffix}.jpg`);
       assert.equal(bytes[0], 0xff);
       assert.equal(bytes[1], 0xd8);
-      assert.ok(bytes.length < 100_000);
+      assert.ok(bytes.length < budget);
+      assert.ok(bytes.length < readFileSync(`public/cases/${previous}${frame.evidenceId}.jpg`).length * .85);
     }
   }
 });

@@ -13,8 +13,8 @@ function EvidenceFilmstrip({ record }: { record: ResearchCase }) {
       const evidence = record.evidence.find(frame => frame.id === item.evidenceId);
       return evidence ? [{ ...evidence, description: item.description }] : [];
     }), [record]);
-  const { ref, visible, everVisible } = useVisibility<HTMLElement>("120px 0px");
-  const viewport = useRef<HTMLDivElement>(null);
+  const { ref, everVisible } = useVisibility<HTMLElement>("640px 0px");
+  const { ref: viewport, visible } = useVisibility<HTMLDivElement>("0px");
   const firstGroup = useRef<HTMLDivElement>(null);
   const groupWidth = useRef(0);
   const scrollOffset = useRef(0);
@@ -126,10 +126,10 @@ function EvidenceFilmstrip({ record }: { record: ResearchCase }) {
         {[0, 1].map(copy => <div key={copy} className="filmstrip-group" ref={copy === 0 ? firstGroup : undefined} role={copy === 0 ? "list" : undefined} aria-hidden={copy === 1 ? true : undefined}>
           {frames.map((frame, index) => <figure key={frame.id} className="filmstrip-frame" role={copy === 0 ? "listitem" : undefined} data-evidence-id={frame.id}>
             <div className="filmstrip-image">
-              {loaded.has(frame.id) && <img src={`cases/filmstrip/${frame.id}.jpg`}
-                srcSet={`cases/filmstrip/${frame.id}.jpg 320w, ${frame.image} 480w`}
+              {loaded.has(frame.id) && <img src={`cases/filmstrip-v2/${frame.id}.jpg`}
+                srcSet={`cases/filmstrip-v2/${frame.id}.jpg 320w, cases/filmstrip-v2/${frame.id}-400.jpg 400w`}
                 sizes="(max-width: 420px) 220px, (max-width: 760px) 236px, 260px" width={320} height={268}
-                loading="lazy" decoding="async" draggable={false} alt={copy === 0 ? frame.description : ""}/>}
+                loading="eager" decoding="async" draggable={false} alt={copy === 0 ? frame.description : ""}/>}
             </div>
             <figcaption><div className="filmstrip-frame-meta"><time>{frame.timestamp}</time><span>{String(index + 1).padStart(2, "0")}</span></div><span className="filmstrip-description">{frame.description}</span></figcaption>
           </figure>)}
